@@ -3,7 +3,7 @@
 [![NeoForge](https://img.shields.io/badge/NeoForge-1.21.1-orange?style=flat-square)](https://neoforged.net/)
 [![Java](https://img.shields.io/badge/Java-21-blue?style=flat-square)](https://adoptium.net/)
 
-NeoForge **1.21.1** 服务端安全套件：sudo 门禁、行为审计、物品溯源、异常告警、聊天过滤，以及嵌入式 Web 管理面板。项目采用 **LGPL-3.0-or-later** 许可，适合二次开发和服务端集成。
+NeoForge 1.21.1 安全套件：OP 密码鉴权、指令门禁、全行为审计、物品溯源、异常告警、Web 管理面板。服务端与客户端均需安装。项目采用 **LGPL-3.0-or-later** 许可，适合二次开发和服务端集成。
 
 > **中文** · [English](#english) · [分发策略（推荐）](#分发策略推荐)
 
@@ -52,7 +52,7 @@ NeoForge **1.21.1** 服务端安全套件：sudo 门禁、行为审计、物品�
 4. Release 正文强调：
    - **必须改** `panelPassword`（默认值会拒绝启动面板）
    - 面板默认只听 `127.0.0.1:8088`
-   - 客户端无需安装
+   - 玩家客户端也需安装（密码弹窗 / 网络包依赖）
 5. 可选：同步上传到 Modrinth/CurseForge，指向同一 jar 与同一说明
 
 ### 版本号
@@ -119,7 +119,7 @@ panelPassword = "换成强密码"          # 不能再是默认 esplus
 5. 给自己 OP → `/setoppw` → 面板「管理员」里升角色（如需执行受保护指令）
 6. 本机打开 `http://127.0.0.1:8088/`
 
-**纯服务端模组**：玩家客户端不必装。
+**服务端 + 客户端均需安装**：sudo 鉴权依赖客户端网络包与 Qt 密码弹窗。
 
 ### 远程访问面板（推荐）
 
@@ -174,7 +174,7 @@ panelPassword = "换成强密码"          # 不能再是默认 esplus
 
 ## English {#english}
 
-**ES+** is a **server-side** NeoForge 1.21.1 security suite (sudo gate, audit, item trace, alerts, chat filter, embedded web panel).
+**ES+** is a NeoForge 1.21.1 security suite (sudo gate, audit, item trace, alerts, chat filter, embedded web panel). **Requires installation on both server and client.**
 
 ### Recommended distribution
 
@@ -182,9 +182,9 @@ Ship **one fat mod jar** via **GitHub Releases**. The Spring panel fat-jar is **
 
 Build: `./gradlew build` → `build/libs/esplus-<version>.jar`.
 
-Install: drop into server `mods/`, set a strong `panelPassword` in `config/esplus-common.toml` (default password refuses to start the panel), keep `panelBindAddress = "127.0.0.1"`, expose remotely only via SSH tunnel / HTTPS reverse proxy (`deploy/public-ingress/`).
+Install: drop into server `mods/` AND each player's client `mods/`, set a strong `panelPassword` in `config/esplus-common.toml` (default password refuses to start the panel), keep `panelBindAddress = "127.0.0.1"`, expose remotely only via SSH tunnel / HTTPS reverse proxy (`deploy/public-ingress/`).
 
-Clients do not need the mod. After `/setoppw`, promote the user to `moderator`/`admin` in the panel before protected commands work under `/sudo`.
+Clients must also install the mod (required for the Qt password prompt and network payload exchange). After `/setoppw`, promote the user to `moderator`/`admin` in the panel before protected commands work under `/sudo`.
 
 ---
 

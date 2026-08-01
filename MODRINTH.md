@@ -2,19 +2,19 @@
 
 [![NeoForge](https://img.shields.io/badge/NeoForge-1.21.1-orange?style=flat-square)](https://neoforged.net/)
 
-**Server-side security suite** — OP password auth, protected command gating, full behavior audit, item traceability, anomaly alerts, incident chain reconstruction, and an embedded admin web panel. All in one mod. Drop into `mods/`, no extra setup.
+**Security suite** — OP password auth, protected command gating, full behavior audit, item traceability, anomaly alerts, incident chain reconstruction, and an embedded admin web panel. All in one mod. **Requires both server and client.**
 
 Licensed under **LGPL-3.0-or-later**.
 
-> 服务端安全套件：OP 密码鉴权、指令门禁、全行为审计、物品溯源、异常告警、事发链还原、Web 管理面板。一个模组搞定。
+> 安全套件：OP 密码鉴权、指令门禁、全行为审计、物品溯源、异常告警、事发链还原、Web 管理面板。服务端与客户端均需安装。
 > 
-> サーバーサイドセキュリティスイート：OP パスワード認証、コマンドゲート、全行動監査、アイテムトレース、異常アラート、インシデントチェーン復元、Web 管理パネル。
+> セキュリティスイート：OP パスワード認証、コマンドゲート、全行動監査、アイテムトレース、異常アラート、インシデントチェーン復元、Web 管理パネル。サーバー・クライアント両方にインストールが必要。
 > 
-> 서버 사이드 보안 스위트: OP 비밀번호 인증, 명령어 게이트, 전체 행동 감사, 아이템 추적, 이상 알림, 사건 체인 복원, 웹 관리 패널.
+> 보안 스위트: OP 비밀번호 인증, 명령어 게이트, 전체 행동 감사, 아이템 추적, 이상 알림, 사건 체인 복원, 웹 관리 패널. 서버와 클라이언트 모두 설치 필요.
 > 
-> Serverseitige Sicherheitssuite: OP-Passwort, Befehlssperre, Verhaltensprüfung, Item-Rückverfolgung, Anomalie-Warnungen, Web-Panel.
+> Sicherheitssuite: OP-Passwort, Befehlssperre, Verhaltensprüfung, Item-Rückverfolgung, Anomalie-Warnungen, Web-Panel. Installation auf Server und Client erforderlich.
 > 
-> Серверный комплекс безопасности: пароль OP, командный шлюз, аудит действий, отслеживание предметов, оповещения об аномалиях, веб-панель.
+> Комплекс безопасности: пароль OP, командный шлюз, аудит действий, отслеживание предметов, оповещения об аномалиях, веб-панель. Требуется установка на сервер и клиент.
 
 ---
 
@@ -88,12 +88,12 @@ panelBindAddress = "127.0.0.1" # Keep localhost; expose via reverse tunnel
 
 ## Installation / 安装
 
-1. Drop `esplus-1.0.0.jar` into your server's `mods/` folder
+1. Drop `esplus-1.0.0.jar` into your server's `mods/` folder AND each player's client `mods/` folder
 2. Start the server
 3. OP yourself, then run `/setoppw` to set your sudo password
 4. Access the panel at `http://127.0.0.1:8088/` (default: `admin` / `esplus` — **change immediately!**)
 
-**Requires**: NeoForge 21.1.235+ for Minecraft 1.21.1. **Server-side only** — clients do not need to install this mod.
+**Requires**: NeoForge 21.1.235+ for Minecraft 1.21.1. **Both server and client must install this mod** — the client-side network payload system (Qt password prompt, sudo auth exchange) requires it.
 
 ---
 
@@ -112,4 +112,4 @@ panelBindAddress = "127.0.0.1" # Keep localhost; expose via reverse tunnel
 
 - **Change the default panel password** (`esplus`) immediately after first launch
 - Panel is `127.0.0.1` by default — expose via reverse tunnel for remote access, do NOT set `0.0.0.1` on public networks without HTTPS
-- The mod is **server-side only** — clients do not need to install it (Qt password prompt is auto-delivered via NeoForge networking)
+- The mod requires installation on **both server and client** (Qt password prompt and sudo auth packets travel over NeoForge networking)
