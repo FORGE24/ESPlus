@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('旁观者策略 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('spectator')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>旁观者策略</h2><p>默认游戏模式与 spectatorsGenerateChunks；可快捷切换在线玩家模式。</p></div>
+    <p th:if="${msg != null}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <div class="card">
+      <div class="card-title">当前</div>
+      <div class="card-body kv-grid">
+        <div class="k">默认模式</div><div class="v" th:text="${runtime.default_gamemode ?: '--'}">--</div>
+        <th:block th:each="r : ${rules}">
+          <div class="k" th:text="${r.rule_id}">rule</div>
+          <div class="v" th:text="${r.value}">true</div>
+        </th:block>
+      </div>
+      <div class="card-body">
+        <p class="hint"><a th:href="@{/gamerules}">打开 Gamerule 矩阵</a> 修改 spectatorsGenerateChunks；
+          <a th:href="@{/world/difficulty}">难度与模式</a> 修改默认 gamemode。</p>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">在线玩家 → 旁观 / 生存</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>玩家</th><th>当前模式</th><th>操作</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td th:text="${p.name}"></td>
+            <td th:text="${p.game_mode}"></td>
+            <td class="dense-actions">
+              <form th:action="@{/players/gamemode}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <input type="hidden" name="mode" value="spectator"/><button type="submit">旁观</button>
+              </form>
+              <form th:action="@{/players/gamemode}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <input type="hidden" name="mode" value="survival"/><button type="submit">生存</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(online)}"><td colspan="3">无在线玩家</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

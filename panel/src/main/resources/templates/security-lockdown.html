@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('紧急严打 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('lockdown')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>一键严打模式</h2>
+      <p>开启后：维护模式、踢出非 OP、新登录拒绝、sudo 会话缩短。</p>
+    </div>
+    <p th:if="${msg}" class="flash-ok" th:text="${msg}"></p>
+    <div class="card">
+      <div class="card-body">
+        <p>当前 lockdown：<span th:text="${runtime.lockdown} ?: 0"></span></p>
+        <p>维护模式：<span th:text="${runtime.maintenance} ?: 0"></span></p>
+        <form th:action="@{/security/lockdown/on}" method="post" onsubmit="return confirm('确认开启紧急严打？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="danger">开启严打</button>
+        </form>
+        <form th:action="@{/security/lockdown/off}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit">关闭严打</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

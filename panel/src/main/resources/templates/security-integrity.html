@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('审计完整性 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('integrity')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>审计哈希链</h2>
+      <p>检测 global_events 是否被库内篡改（防改行，不防整文件替换）。</p>
+    </div>
+    <div class="grid">
+      <div class="stat"><div class="label">哈希链</div><div class="value" th:text="${enabled} ? 'ON' : 'OFF'">ON</div></div>
+      <div class="stat"><div class="label">状态</div><div class="value" th:text="${ok} ? 'OK' : 'VIOLATION'">OK</div></div>
+      <div class="stat"><div class="label">已校验</div><div class="value" th:text="${checked}">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">详情</div>
+      <div class="card-body">
+        <p>断点：<span class="mono" th:text="${firstBreak} ?: '无'">-</span></p>
+        <p>计算 tip：<span class="mono" th:text="${computedTip}">-</span></p>
+        <p>存储 tip：<span class="mono" th:text="${storedTip}">-</span></p>
+        <p>tip 匹配：<span th:text="${tipMatches}"></span></p>
+        <form th:action="@{/security/integrity/verify}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit">重新校验</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">RSA 块签名</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>时间</th><th>tip</th><th>事件数</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${signatures}">
+            <td th:text="${s.id}"></td>
+            <td th:text="${s.ts}"></td>
+            <td class="mono" th:text="${s.tip_hash}"></td>
+            <td th:text="${s.event_count}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

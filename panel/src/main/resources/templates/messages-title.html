@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('标题字幕 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('title')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>标题 / 字幕 / 动作栏</h2><p>向全体在线玩家发送 title 类消息。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">提交失败。</p>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">发送</div>
+      <div class="card-body">
+        <form th:action="@{/messages/title}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <label class="field-cap">类型</label>
+            <select name="kind">
+              <option value="title">标题</option>
+              <option value="subtitle">标题+字幕</option>
+              <option value="actionbar">动作栏</option>
+            </select>
+          </div>
+          <div class="form-row"><label class="field-cap">主文本</label><input type="text" name="text" maxlength="200" required/></div>
+          <div class="form-row"><label class="field-cap">字幕（可选）</label><input type="text" name="subtitle" maxlength="200"/></div>
+          <button type="submit">发送</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

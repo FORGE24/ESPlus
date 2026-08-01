@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('服务器日志 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('diag-logs')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>服务器日志</h2><p>与控制台同源捕获。</p></div>
+    <meta http-equiv="refresh" content="5"/>
+    <div class="card">
+      <div class="card-title">过滤</div>
+      <div class="card-body">
+        <form method="get" class="inline-form">
+          <select name="level"><option value="">全部级别</option>
+            <option value="INFO" th:selected="${level == 'INFO'}">INFO</option>
+            <option value="WARN" th:selected="${level == 'WARN'}">WARN</option>
+            <option value="ERROR" th:selected="${level == 'ERROR'}">ERROR</option>
+          </select>
+          <input type="text" name="q" th:value="${q}" placeholder="关键词"/>
+          <button type="submit">筛选</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">日志</div>
+      <div class="card-body">
+        <div class="logbox">
+          <div th:each="l : ${logs}" th:class="|log-${l.level}|">
+            <span class="log-meta" th:text="|${l.id} ${l.level}|"></span>
+            <span th:text="${l.message}"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('本机 Center - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('center')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2 th:text="${serverName}">ES+</h2>
+      <p>Server ID：<span class="mono" th:text="${serverId}">local</span></p>
+    </div>
+    <p class="hint" th:text="${federationNote}"></p>
+    <div class="grid">
+      <div class="stat"><div class="label">TPS</div><div class="value" th:text="${runtime.tps_approx} ?: '-'">20</div></div>
+      <div class="stat"><div class="label">玩家</div><div class="value" th:text="${runtime.player_count} ?: 0">0</div></div>
+      <div class="stat"><div class="label">未确认告警</div><div class="value" th:text="${alertsOpen}">0</div></div>
+      <div class="stat"><div class="label">待审批</div><div class="value" th:text="${pendingApprovals}">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">健康提示</div>
+      <div class="card-body" th:text="${runtime.entity_share_hint} ?: '暂无'"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">高风险管理员</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>名称</th><th>分数</th><th>建议</th></tr></thead>
+          <tbody>
+          <tr th:each="r : ${topRisk}">
+            <td th:text="${r.actor_name}"></td>
+            <td th:text="${r.score}"></td>
+            <td th:text="${r.suggestion}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

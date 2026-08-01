@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('定时广播 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('schedule')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>定时广播</h2>
+      <p>延迟一次发送，或按间隔循环。由游戏服每秒扫描到期任务。</p>
+    </div>
+    <meta http-equiv="refresh" content="10"/>
+    <p th:if="${msg != null}" class="flash-ok">已更新。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">新建计划</div>
+      <div class="card-body">
+        <form th:action="@{/messages/schedule}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <label class="field-cap">前缀</label>
+            <select name="prefix">
+              <option value="[公告]">[公告]</option>
+              <option value="[重要]">[重要]</option>
+              <option value="[维护]">[维护]</option>
+              <option value="§c[警告]">§c[警告]</option>
+            </select>
+          </div>
+          <div class="form-row"><label class="field-cap">延迟(秒)</label><input type="number" name="delaySeconds" value="60" min="0" max="604800"/></div>
+          <div class="form-row"><label class="field-cap">间隔(秒)</label><input type="number" name="intervalSeconds" value="0" min="0" max="604800"/><span class="hint">0 = 只发一次</span></div>
+          <div class="form-row"><label class="field-cap">重复条数</label><input type="number" name="times" value="1" min="1" max="10"/></div>
+          <div class="form-row"><label class="field-cap">备注</label><input name="note" maxlength="80" placeholder="可选"/></div>
+          <textarea name="message" rows="3" maxlength="500" placeholder="公告内容" required></textarea>
+          <button type="submit">创建</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">计划列表</div>
+      <div class="card-body">
+        <table>
+          <thead>
+          <tr><th>ID</th><th>备注</th><th>载荷</th><th>间隔</th><th>下次</th><th>上次</th><th>状态</th><th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">操作</th></tr>
+          </thead>
+          <tbody>
+          <tr th:each="s : ${schedules}">
+            <td th:text="${s.id}"></td>
+            <td th:text="${s.note}"></td>
+            <td class="mono" th:text="${s.payload}"></td>
+            <td th:text="${s.interval_seconds}"></td>
+            <td class="mono" th:text="${s.next_run_at}"></td>
+            <td class="mono" th:text="${s.last_run_at}"></td>
+            <td th:text="${s.enabled == 1 ? '启用' : '停用'}"></td>
+            <td class="dense-actions" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{|/messages/schedule/${s.id}/toggle|}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="enabled" th:value="${s.enabled == 1 ? 'false' : 'true'}"/>
+                <button type="submit" th:text="${s.enabled == 1 ? '停用' : '启用'}">切换</button>
+              </form>
+              <form th:action="@{|/messages/schedule/${s.id}/delete|}" method="post" onsubmit="return confirm('删除？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(schedules)}"><td colspan="8">暂无计划</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

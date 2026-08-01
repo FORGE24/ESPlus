@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('远程运维 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('remote')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>远程运维 / SSH</h2>
+      <p>面板经 SSH 反向隧道暴露；游戏控制台在面板内操作。系统 shell 请用本机 SSH 客户端。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">SSH 入口提示</div>
+      <div class="card-body">
+        <table class="info-table">
+          <tr><th>配置项</th><td>panelSshHint</td></tr>
+          <tr><th>当前提示</th><td><code class="mono" th:text="${sshHint}">ssh user@public-vps</code></td></tr>
+        </table>
+        <p class="hint" style="margin-top:12px">推荐：公网机仅开 443（Caddy）← 面板机 <code>ssh -R 127.0.0.1:8088:127.0.0.1:8088</code>。详见 <code>deploy/public-ingress/</code>。</p>
+      </div>
+    </div>
+
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">服务器终端（游戏指令）</div>
+      <div class="card-body">
+        <p class="hint">这是 Minecraft 控制台指令通道，不是操作系统 shell。</p>
+        <a class="btn" th:href="@{/console}">打开游戏控制台</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">系统 Shell</div>
+      <div class="card-body">
+        <p class="hint">面板不内嵌交互式 OS SSH。请使用 OpenSSH / PuTTY：</p>
+        <pre class="mono" th:text="${sshHint}">ssh user@host</pre>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

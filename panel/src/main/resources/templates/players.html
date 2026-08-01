@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('玩家管理 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('players')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>在线 / 踢封</h2>
+      <p>在线列表由游戏服同步；踢出与封禁需填写原因。本页约 8 秒自动刷新。</p>
+    </div>
+    <meta http-equiv="refresh" content="8"/>
+    <p th:if="${msg != null}" class="flash-ok">已提交操作：<span th:text="${msg}"></span></p>
+    <p th:if="${err != null}" class="flash-err">操作失败，请检查参数后重试。</p>
+
+    <div class="card">
+      <div class="card-title">在线玩家</div>
+      <div class="card-body">
+        <table>
+          <thead>
+          <tr>
+            <th>名称</th><th>延迟</th><th>生命/饥</th><th>维度</th><th>坐标</th><th>模式</th><th>OP</th>
+            <th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">快捷</th>
+            <th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">踢封</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td>
+              <div th:text="${p.name}"></div>
+              <div class="mono" th:text="${p.uuid}"></div>
+            </td>
+            <td th:text="${p.ping}"></td>
+            <td th:text="|${p.health ?: '-'} / ${p.food ?: '-'}|"></td>
+            <td th:text="${p.dimension}"></td>
+            <td class="mono" th:text="|${p.x}, ${p.y}, ${p.z}|"></td>
+            <td th:text="${p.game_mode}"></td>
+            <td th:text="${p.is_op == 1 ? '是' : '否'}"></td>
+            <td class="dense-actions" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/players/heal}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit">治疗</button></form>
+              <form th:action="@{/players/feed}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit">饱食</button></form>
+              <form th:action="@{/players/extinguish}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit">灭火</button></form>
+              <form th:action="@{/players/gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="hidden" name="mode" value="spectator"/><button type="submit">旁观</button></form>
+              <form th:action="@{/players/gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="hidden" name="mode" value="survival"/><button type="submit">生存</button></form>
+              <form th:action="@{/players/clear}" method="post" onsubmit="return confirm('清空背包？');"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit" class="danger">清包</button></form>
+              <form th:action="@{/players/clear-ender}" method="post" onsubmit="return confirm('清空末影箱？');"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit" class="danger">清末影</button></form>
+              <form th:action="@{/players/teleport}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="hidden" name="mode" value="spawn"/><button type="submit">回出生点</button></form>
+              <form th:action="@{/players/spawnpoint}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="hidden" name="mode" value="here"/><button type="submit">设重生点(此)</button></form>
+              <form th:action="@{/players/spawnpoint}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="hidden" name="mode" value="world"/><button type="submit">设重生点(世界)</button></form>
+              <form th:action="@{/players/clear-effects}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><button type="submit">清效果</button></form>
+              <form th:action="@{/players/effect}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <select name="effect">
+                  <option value="speed">speed</option>
+                  <option value="haste">haste</option>
+                  <option value="strength">strength</option>
+                  <option value="jump_boost">jump_boost</option>
+                  <option value="regeneration">regeneration</option>
+                  <option value="resistance">resistance</option>
+                  <option value="fire_resistance">fire_resistance</option>
+                  <option value="water_breathing">water_breathing</option>
+                  <option value="invisibility">invisibility</option>
+                  <option value="night_vision">night_vision</option>
+                  <option value="absorption">absorption</option>
+                  <option value="glowing">glowing</option>
+                  <option value="slow_falling">slow_falling</option>
+                  <option value="darkness">darkness</option>
+                </select>
+                <input type="number" name="seconds" value="60" min="1" max="3600"/>
+                <input type="number" name="amplifier" value="0" min="0" max="10"/>
+                <button type="submit">给予效果</button>
+              </form>
+              <form th:action="@{/messages/mute}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <input type="number" name="minutes" value="30" min="0"/>
+                <input name="reason" placeholder="禁言原因"/>
+                <button type="submit" class="danger">禁言</button>
+              </form>
+              <form th:action="@{/players/teleport}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <input type="hidden" name="mode" value="player"/>
+                <select name="target"><option value="">传送到…</option><option th:each="o : ${online}" th:if="${o.uuid != p.uuid}" th:value="${o.name}" th:text="${o.name}"></option></select>
+                <button type="submit">传送到玩家</button>
+              </form>
+              <form th:action="@{/messages/tell}" method="post" class="stack-form"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="player" th:value="${p.name}"/><input type="hidden" name="uuid" th:value="${p.uuid}"/><input type="text" name="message" placeholder="私信" required/><button type="submit">私信</button></form>
+            </td>
+            <td class="actions" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/players/kick}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/>
+                <input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <textarea name="reason" rows="2" maxlength="200" placeholder="踢出原因" required></textarea>
+                <button type="submit" class="danger">踢出</button>
+              </form>
+              <form th:action="@{/players/temp-ban}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/>
+                <input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <input type="number" name="minutes" value="60" min="1" max="525600"/>
+                <textarea name="reason" rows="2" maxlength="200" placeholder="临时封禁原因" required></textarea>
+                <button type="submit" class="danger">临时封禁</button>
+              </form>
+              <form th:action="@{/players/ban}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/>
+                <input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <textarea name="reason" rows="2" maxlength="200" placeholder="永久封禁原因" required></textarea>
+                <button type="submit" class="danger">永久封禁</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(online)}"><td colspan="9">当前没有在线玩家。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">手动踢出 / 封禁</div>
+      <div class="card-body">
+        <form th:action="@{/players/kick}" method="post" class="mod-form" style="margin-bottom:16px">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><input type="text" name="player" placeholder="玩家名" required/><input type="text" name="uuid" placeholder="UUID（可选）"/></div>
+          <textarea name="reason" rows="2" maxlength="200" placeholder="踢出原因" required></textarea>
+          <button type="submit" class="danger">踢出</button>
+        </form>
+        <form th:action="@{/players/temp-ban}" method="post" class="mod-form" style="margin-bottom:16px">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><input type="text" name="player" placeholder="玩家名" required/><input type="text" name="uuid" placeholder="UUID（可选）"/><input type="number" name="minutes" value="60" min="1"/></div>
+          <textarea name="reason" rows="2" maxlength="200" placeholder="临时封禁原因" required></textarea>
+          <button type="submit" class="danger">临时封禁</button>
+        </form>
+        <form th:action="@{/players/ban}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><input type="text" name="player" placeholder="玩家名" required/><input type="text" name="uuid" placeholder="UUID（可选）"/></div>
+          <textarea name="reason" rows="2" maxlength="200" placeholder="永久封禁原因" required></textarea>
+          <button type="submit" class="danger">永久封禁</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近队列</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>动作</th><th>玩家</th><th>原因</th><th>状态</th><th>结果</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${recentModeration}">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.action}"></td>
+            <td th:text="${a.target_name}"></td>
+            <td th:text="${a.payload}"></td>
+            <td th:text="${a.status}"></td>
+            <td th:text="${a.result}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(recentModeration)}"><td colspan="6">暂无记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

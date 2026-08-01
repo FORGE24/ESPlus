@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('移动轨迹 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('movements')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>移动轨迹</h2><p>按玩家名查询采样点。</p></div>
+    <div class="card">
+      <div class="card-title">查询</div>
+      <div class="card-body">
+        <form method="get" class="inline-form">
+          <input type="text" name="player" th:value="${player}" placeholder="玩家名" required/>
+          <button type="submit">查询</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" th:if="${movements != null}">
+      <div class="card-title">结果</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>维度</th><th>坐标</th></tr></thead>
+          <tbody>
+          <tr th:each="m : ${movements}">
+            <td th:text="${m.ts}"></td>
+            <td th:text="${m.dimension}"></td>
+            <td class="mono" th:text="|${m.x}, ${m.y}, ${m.z}|"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(movements)}"><td colspan="3">无记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

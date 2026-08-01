@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('初始化向导 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <main class="main-content" style="margin-left:0;max-width:720px">
+    <div class="page-heading">
+      <h2>首次安装向导</h2>
+      <p>完成关键安全基线后即可进入控制台。后续可在安全分析中细化。</p>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <form th:action="@{/setup/complete}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <label class="field-cap">默认安全策略</label>
+            <select name="policy">
+              <option>宽松</option>
+              <option selected>推荐</option>
+              <option>严格</option>
+            </select>
+          </div>
+          <p class="hint">推荐：审批开启 + 哈希链 + 自动响应。严格：额外提示启用 TOTP。</p>
+          <p class="hint">请确认已修改面板强密码；Webhook / opsApiToken 可在 toml 中稍后配置。</p>
+          <button type="submit" class="btn-save">完成并进入面板</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

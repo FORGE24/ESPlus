@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('运行时配置 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('runtime-cfg')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>运行时配置（只读）</h2><p>面板与游戏服关键参数镜像。</p></div>
+    <div class="card">
+      <div class="card-title">配置</div>
+      <div class="card-body kv-grid">
+        <div class="k">面板绑定</div><div class="v mono" th:text="|${panelBind}:${panelPort}|">127.0.0.1:8088</div>
+        <div class="k">安全服务</div><div class="v" th:text="${securityReady ? '就绪' : '未就绪 / 未知'}">--</div>
+        <div class="k">SSH 提示</div><div class="v" th:text="${sshHint ?: '（空）'}">--</div>
+        <div class="k">游戏端口</div><div class="v" th:text="${runtime.game_port ?: '--'}">--</div>
+        <div class="k">白名单</div><div class="v" th:text="${runtime.whitelist_enabled == 1 ? '开' : '关'}">关</div>
+        <div class="k">MC / NeoForge / Mod</div>
+        <div class="v" th:text="|${runtime.mc_version ?: '?'} / ${runtime.neoforge_version ?: '?'} / ${runtime.mod_version ?: '?'}|">--</div>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

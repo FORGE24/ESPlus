@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Mod 来源 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('mod-sources')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>事件来源聚合</h2>
+      <p>按 global_events.source 统计（薄壳，非第三方 Mod 深度钩子）。</p>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <table>
+          <thead><tr><th>来源</th><th>次数</th><th>最近</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${sources}">
+            <td th:text="${s.source}"></td>
+            <td th:text="${s.cnt}"></td>
+            <td th:text="${s.last_ts}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

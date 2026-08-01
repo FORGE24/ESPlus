@@ -1,0 +1,6 @@
+${AnsiColor.CYAN}_____ __________  __          
+  / ___// ____/ __ \/ /_  _______
+  \__ \/ __/ / /_/ / / / / / ___/
+ ___/ / /___/ ____/ / /_/ (__  ) 
+/____/_____/_/   /_/\__,_/____/${AnsiColor.BRIGHT_WHITE}
+:: ES+ Panel ::${AnsiColor.DEFAULT}  ${spring-boot.formatted-version}

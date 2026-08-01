@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('连接与端口 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('connection')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>连接与端口</h2>
+      <p>游戏服与面板监听信息；可修改 MOTD。</p>
+    </div>
+    <p th:if="${msg == 'motd_queued'}" class="flash-ok">MOTD 已提交。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <div class="card">
+      <div class="card-title">连接参数</div>
+      <div class="card-body kv-grid">
+        <div class="k">游戏端口</div><div class="v" th:text="${runtime.game_port ?: '--'}">25565</div>
+        <div class="k">正版验证</div><div class="v" th:text="${runtime.online_mode == 1 ? '开启' : '关闭'}">开启</div>
+        <div class="k">MOTD</div><div class="v" th:text="${runtime.motd ?: '(空)'}">--</div>
+        <div class="k">挂机踢出(分)</div><div class="v" th:text="${runtime.idle_timeout ?: 0}">0</div>
+        <div class="k">面板地址</div><div class="v mono" th:text="|http://${panelBind}:${panelPort}/|">http://127.0.0.1:8088/</div>
+        <div class="k">SSH 提示</div><div class="v" th:text="${sshHint != null and !#strings.isEmpty(sshHint) ? sshHint : '（未配置 esplus.sshHint）'}">--</div>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">修改 MOTD</div>
+      <div class="card-body">
+        <form th:action="@{/system/motd}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <textarea name="motd" rows="2" maxlength="200" th:text="${runtime.motd}"></textarea>
+          <button type="submit">应用 MOTD</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

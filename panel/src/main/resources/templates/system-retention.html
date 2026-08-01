@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('数据保留 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('retention')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>数据保留</h2><p>触发审计/事件等过期数据清理。配置默认天数见 toml。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交清理。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <div class="card">
+      <div class="card-title">当前配置镜像</div>
+      <div class="card-body kv-grid">
+        <div class="k">审计保留天数</div><div class="v" th:text="${runtime.audit_retention_days ?: '--'}">30</div>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">立即清理</div>
+      <div class="card-body">
+        <form th:action="@{/system/retention}" method="post" class="mod-form" onsubmit="return confirm('确认清理过期数据？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <label class="field-cap">保留天数</label>
+            <input type="number" name="days" th:value="${runtime.audit_retention_days ?: 30}" min="1" max="3650"/>
+          </div>
+          <button type="submit" class="danger">执行清理</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

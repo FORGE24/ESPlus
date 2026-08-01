@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('仪表盘 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>设备 / 服务总览</h2>
+      <p>全局行为侦测 · 物品来源链 · 异常告警 · 事发还原</p>
+    </div>
+
+    <div class="grid">
+      <div class="stat"><div class="label">TPS 近似</div><div class="value" th:text="${runtime.tps_approx != null ? #numbers.formatDecimal(runtime.tps_approx,1,2) : '--'}">--</div></div>
+      <div class="stat"><div class="label">在线玩家</div><div class="value" th:text="${onlineCount}">0</div></div>
+      <div class="stat"><div class="label">待处理动作</div><div class="value" th:text="${pendingActions}">0</div></div>
+      <div class="stat"><div class="label">24h 失败动作</div><div class="value" th:text="${failedActions}">0</div></div>
+      <div class="stat"><div class="label">24h 事件</div><div class="value" th:text="${events24h}">0</div></div>
+      <div class="stat"><div class="label">未确认告警</div><div class="value" th:text="${alertsOpen}">0</div></div>
+      <div class="stat"><div class="label">物品溯源</div><div class="value" th:text="${traces}">0</div></div>
+      <div class="stat"><div class="label">24h 安全审计</div><div class="value" th:text="${audit24h}">0</div></div>
+    </div>
+    <meta http-equiv="refresh" content="15"/>
+    <p class="hint">快捷入口：
+      <a th:href="@{/status}">服务总览</a> ·
+      <a th:href="@{/status/performance}">性能监视</a> ·
+      <a th:href="@{/players}">在线列表</a> ·
+      <a th:href="@{/items/inventory}">背包/末影箱</a> ·
+      <a th:href="@{/messages/schedule}">定时广播</a> ·
+      <a th:href="@{/diag/actions}">动作诊断</a>
+    </p>
+
+    <div class="card">
+      <div class="card-title">TPS 走势（近 1 分钟）</div>
+      <div class="card-body">
+        <div class="spark" th:if="${tpsSamples != null and !#lists.isEmpty(tpsSamples)}">
+          <div th:each="s : ${tpsSamples}" class="spark-bar tps" th:style="|height:${s.tps_pct}%|"
+               th:title="|TPS ${#numbers.formatDecimal(s.tps,1,2)} / MSPT ${#numbers.formatDecimal(s.mspt_ms,1,2)}|"></div>
+        </div>
+        <p class="hint" th:if="${tpsSamples == null or #lists.isEmpty(tpsSamples)}">尚无采样；游戏服启动后约 1 分钟可见。</p>
+        <p class="hint"><a th:href="@{/status/performance}">查看完整性能页</a></p>
+      </div>
+    </div>
+
+    <div class="card" th:if="${schedules != null and !#lists.isEmpty(schedules)}">
+      <div class="card-title">即将执行的定时广播</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>备注</th><th>间隔</th><th>下次</th><th>状态</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${schedules}">
+            <td th:text="${s.id}"></td>
+            <td th:text="${s.note ?: s.payload}"></td>
+            <td th:text="${s.interval_seconds}"></td>
+            <td class="mono" th:text="${s.next_run_at}"></td>
+            <td th:text="${s.enabled == 1 ? '启用' : '停用'}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近安全审计</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>UUID</th><th>动作</th><th>详情</th><th>结果</th></tr></thead>
+          <tbody>
+          <tr th:each="l : ${recentAudit}">
+            <td th:text="${l.ts}"></td>
+            <td th:text="${l.uuid}"></td>
+            <td th:text="${l.action}"></td>
+            <td th:text="${l.detail}"></td>
+            <td th:text="${l.success == 1 ? 'OK' : 'FAIL'}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近告警</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>级别</th><th>标题</th><th>玩家</th><th>内容</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${recentAlerts}">
+            <td th:text="${a.ts}"></td>
+            <td th:class="'sev-' + ${a.severity}" th:text="${a.severity}"></td>
+            <td th:text="${a.title}"></td>
+            <td th:text="${a.actor_name}"></td>
+            <td th:text="${a.message}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近事件</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>类别</th><th>动作</th><th>玩家</th><th>物品</th><th>详情</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="e : ${recentEvents}">
+            <td th:text="${e.ts}"></td>
+            <td th:text="${e.category}"></td>
+            <td th:text="${e.action}"></td>
+            <td th:text="${e.actor_name}"></td>
+            <td th:text="${e.item_id}"></td>
+            <td th:text="${e.detail}"></td>
+            <td>
+              <a th:href="@{|/incident/${e.event_id}|}">事发链</a>
+              <a th:if="${e.trace_id != null}" th:href="@{|/trace/${e.trace_id}|}">追溯</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

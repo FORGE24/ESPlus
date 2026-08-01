@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('维度总览 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('world-dimensions')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>维度总览</h2><p>各维度玩家 / 实体 / 区块镜像。</p></div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="card">
+      <div class="card-title">维度</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>维度</th><th>玩家</th><th>实体</th><th>区块</th><th>白天时间</th><th>下雨</th></tr></thead>
+          <tbody>
+          <tr th:each="d : ${dimensions}">
+            <td class="mono" th:text="${d.dimension}"></td>
+            <td th:text="${d.player_count}"></td>
+            <td th:text="${d.entity_count}"></td>
+            <td th:text="${d.chunk_count}"></td>
+            <td th:text="${d.day_time}"></td>
+            <td th:text="${d.raining == 1 ? '是' : '否'}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(dimensions)}"><td colspan="6">暂无数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

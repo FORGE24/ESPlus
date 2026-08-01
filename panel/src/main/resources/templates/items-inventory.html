@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('背包镜像 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('inventory')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>背包 / 末影箱镜像</h2>
+      <p>约每 5 秒同步主背包、盔甲、副手与末影箱；仅在线玩家有数据。</p>
+    </div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="card">
+      <div class="card-title">选择玩家</div>
+      <div class="card-body">
+        <form method="get" class="mod-form">
+          <div class="form-row">
+            <label class="field-cap">在线玩家</label>
+            <select name="q" onchange="this.form.submit()">
+              <option value="">选择…</option>
+              <option th:each="p : ${online}" th:value="${p.uuid}" th:text="${p.name}"
+                      th:selected="${q != null and (q == p.uuid or q == p.name)}"></option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="field-cap">分区</label>
+            <select name="section" onchange="if(document.querySelector('select[name=q]').value) this.form.submit()">
+              <option value="" th:selected="${section == null or #strings.isEmpty(section)}">全部</option>
+              <option value="main" th:selected="${section == 'main'}">主背包</option>
+              <option value="armor" th:selected="${section == 'armor'}">盔甲</option>
+              <option value="offhand" th:selected="${section == 'offhand'}">副手</option>
+              <option value="ender" th:selected="${section == 'ender'}">末影箱</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="field-cap">或手填</label>
+            <input type="text" id="invQ" placeholder="名 / UUID" th:value="${q}"/>
+            <button type="button" onclick="var s=document.querySelector('select[name=section]').value; location.href='?q='+encodeURIComponent(document.getElementById('invQ').value)+(s?'&amp;section='+s:'')">查询</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card" th:if="${q != null and !#strings.isEmpty(q)}">
+      <div class="card-title">槽位</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>区</th><th>槽</th><th>物品</th><th>数量</th><th>显示名</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${slots}">
+            <td th:text="${s.section}"></td>
+            <td th:text="${s.slot}"></td>
+            <td class="mono" th:text="${s.item_id}"></td>
+            <td th:text="${s.count}"></td>
+            <td th:text="${s.display_name}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(slots)}"><td colspan="5">无物品或玩家不在线 / 尚未同步。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

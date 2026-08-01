@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('面板动作诊断 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('diag-actions')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>面板动作诊断</h2><p>最近队列（含 pending / failed）。</p></div>
+    <meta http-equiv="refresh" content="5"/>
+    <div class="card">
+      <div class="card-title">最近 100 条</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>动作</th><th>目标</th><th>载荷</th><th>状态</th><th>结果</th><th>创建</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${actions}">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.action}"></td>
+            <td th:text="${a.target_name ?: a.target_uuid}"></td>
+            <td class="mono" th:text="${a.payload}"></td>
+            <td th:text="${a.status}"></td>
+            <td th:text="${a.result}"></td>
+            <td th:text="${a.created_at}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

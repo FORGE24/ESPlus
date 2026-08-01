@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('面板账号说明 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('panel-accounts')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>面板账号说明</h2><p>三角色职责（凭据见 toml / runtime properties）。</p></div>
+    <div class="card"><div class="card-title">ADMIN</div><div class="card-body">管理员：控制台、Gamerule、给予物品、停服/重载、权限矩阵。</div></div>
+    <div class="card"><div class="card-title">MODERATOR</div><div class="card-body">版主：踢封、白名单、广播私聊、时间天气、实体清理等轻运维。</div></div>
+    <div class="card"><div class="card-title">VIEWER</div><div class="card-body">只读：查看镜像、审计、告警与状态页，不可提交动作。</div></div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

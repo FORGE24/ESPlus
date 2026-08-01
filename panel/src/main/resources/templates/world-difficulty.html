@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('难度与模式 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('world-difficulty')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>难度与模式</h2>
+      <p>当前难度 <strong th:text="${runtime.difficulty ?: '--'}">--</strong>；
+        Hardcore <strong th:text="${runtime.hardcore == 1 ? '是' : '否'}">否</strong>；
+        默认模式 <strong th:text="${runtime.default_gamemode ?: '--'}">--</strong>。</p>
+    </div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">提交失败。</p>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">难度</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/world/difficulty}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="peaceful"/><button type="submit">Peaceful</button></form>
+        <form th:action="@{/world/difficulty}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="easy"/><button type="submit">Easy</button></form>
+        <form th:action="@{/world/difficulty}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="normal"/><button type="submit">Normal</button></form>
+        <form th:action="@{/world/difficulty}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="hard"/><button type="submit">Hard</button></form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">默认游戏模式</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/world/default-gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="survival"/><button type="submit">生存</button></form>
+        <form th:action="@{/world/default-gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="creative"/><button type="submit">创造</button></form>
+        <form th:action="@{/world/default-gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="adventure"/><button type="submit">冒险</button></form>
+        <form th:action="@{/world/default-gamemode}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="spectator"/><button type="submit">旁观</button></form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

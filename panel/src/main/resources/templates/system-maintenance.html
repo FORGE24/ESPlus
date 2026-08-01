@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('维护模式 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('maintenance')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>维护模式</h2><p>踢出非 OP、拦截后续登录；可选开启白名单；可配置挂机超时。</p></div>
+    <div class="warn-box">将踢出所有非 OP 在线玩家，并拒绝非 OP 登录，直到解除维护。</div>
+    <p th:if="${msg != null}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <div class="card">
+      <div class="card-title">状态</div>
+      <div class="card-body kv-grid">
+        <div class="k">维护中</div>
+        <div class="v" th:text="${runtime.maintenance != null and runtime.maintenance == 1 ? '是' : '否'}">否</div>
+        <div class="k">白名单</div>
+        <div class="v" th:text="${runtime.whitelist_enabled == 1 ? '开' : '关'}">关</div>
+        <div class="k">挂机超时(分)</div>
+        <div class="v" th:text="${runtime.idle_timeout ?: 0}">0</div>
+        <div class="k">在线人数</div>
+        <div class="v" th:text="${#lists.size(online)}">0</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">当前在线</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>玩家</th><th>OP</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td th:text="${p.name}"></td>
+            <td th:text="${p.is_op == 1 ? '是' : '否'}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(online)}"><td colspan="2">无在线玩家</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">踢出非 OP（进入维护）</div>
+      <div class="card-body">
+        <form th:action="@{/system/maintenance/kick}" method="post" class="mod-form" onsubmit="return confirm('确认踢出所有非 OP 并进入维护？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">原因</label><input name="reason" value="服务器维护中，请稍后再试" maxlength="200"/></div>
+          <div class="form-row"><label class="field-cap">同时开启白名单</label><input type="checkbox" name="whitelist" value="true"/></div>
+          <button type="submit" class="danger">执行维护踢人</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">解除维护</div>
+      <div class="card-body">
+        <form th:action="@{/system/maintenance/clear}" method="post" class="mod-form" onsubmit="return confirm('确认解除维护模式？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">同时关闭白名单</label><input type="checkbox" name="whitelist" value="true"/></div>
+          <button type="submit">解除维护</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">挂机超时（分钟）</div>
+      <div class="card-body">
+        <form th:action="@{/system/idle}" method="post" class="inline-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="number" name="minutes" th:value="${runtime.idle_timeout ?: 0}" min="0" max="1440"/>
+          <button type="submit">应用</button>
+        </form>
+        <p class="hint">0 表示禁用挂机踢出（原版语义）。</p>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

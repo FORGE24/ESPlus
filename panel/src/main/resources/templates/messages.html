@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('广播私聊 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('messages')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>广播 / 私聊</h2>
+      <p>全服公告支持前缀与重复发送；私信发给在线玩家。</p>
+    </div>
+    <p th:if="${msg != null}" class="flash-ok">消息已入队，约 2 秒内送达。</p>
+    <p th:if="${err != null}" class="flash-err">发送失败。</p>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">全服公告</div>
+      <div class="card-body">
+        <form th:action="@{/messages/broadcast}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <label class="field-cap">前缀</label>
+            <select name="prefix">
+              <option value="[公告]">[公告]</option>
+              <option value="[重要]">[重要]</option>
+              <option value="[维护]">[维护]</option>
+              <option value="[活动]">[活动]</option>
+              <option value="§c[警告]">§c[警告]</option>
+              <option value="§a[系统]">§a[系统]</option>
+            </select>
+          </div>
+          <div class="form-row"><label class="field-cap">重复次数</label><input type="number" name="times" value="1" min="1" max="10"/></div>
+          <textarea name="message" rows="3" maxlength="500" placeholder="公告内容" required></textarea>
+          <div class="form-row"><button type="submit">发送公告</button></div>
+        </form>
+        <p class="hint">重复次数将连续发送多条相同公告（最多 10）。颜色码依赖客户端对 § 的支持。</p>
+      </div>
+    </div>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">私聊在线玩家</div>
+      <div class="card-body">
+        <form th:action="@{/messages/tell}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row">
+            <select name="uuid">
+              <option value="">选择在线玩家…</option>
+              <option th:each="p : ${online}" th:value="${p.uuid}" th:text="${p.name}"></option>
+            </select>
+            <input type="text" name="player" placeholder="或直接填玩家名"/>
+          </div>
+          <textarea name="message" rows="3" maxlength="500" placeholder="私信内容" required></textarea>
+          <div class="form-row"><button type="submit">发送私信</button></div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

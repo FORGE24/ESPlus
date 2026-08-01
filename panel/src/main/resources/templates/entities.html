@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('实体统计 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('entities')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>实体统计</h2><p>全服实体约 <span th:text="${runtime.entity_count ?: 0}">0</span>；按类型取前 80。</p></div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="card">
+      <div class="card-title">按维度</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>维度</th><th>实体</th><th>玩家</th><th>区块</th></tr></thead>
+          <tbody>
+          <tr th:each="d : ${dimensions}">
+            <td class="mono" th:text="${d.dimension}"></td>
+            <td th:text="${d.entity_count}"></td>
+            <td th:text="${d.player_count}"></td>
+            <td th:text="${d.chunk_count}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">按类型</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>类型</th><th>数量</th></tr></thead>
+          <tbody>
+          <tr th:each="t : ${entityTypes}">
+            <td class="mono" th:text="${t.entity_type}"></td>
+            <td th:text="${t.count}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(entityTypes)}"><td colspan="2">暂无数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

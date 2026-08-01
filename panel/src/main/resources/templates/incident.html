@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('事发链还原 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('search')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>事发链还原</h2>
+      <p th:text="'eventId = ' + ${eventId}"></p>
+    </div>
+    <th:block th:if="${found}">
+      <div class="card">
+        <div class="card-title">中心事件</div>
+        <div class="card-body"><pre class="mono" th:text="${seed}"></pre></div>
+      </div>
+      <div class="card">
+        <div class="card-title">时间线事件</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>时间</th><th>类别</th><th>动作</th><th>详情</th><th>坐标</th></tr></thead>
+            <tbody>
+            <tr th:each="e : ${events}">
+              <td th:text="${e.ts}"></td>
+              <td th:text="${e.category}"></td>
+              <td th:text="${e.action}"></td>
+              <td th:text="${e.detail}"></td>
+              <td th:text="${e.x + ',' + e.y + ',' + e.z}"></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">移动轨迹</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>时间</th><th>维度</th><th>X</th><th>Y</th><th>Z</th><th>疾跑</th><th>飞行</th></tr></thead>
+            <tbody>
+            <tr th:each="m : ${movements}">
+              <td th:text="${m.ts}"></td>
+              <td th:text="${m.dimension}"></td>
+              <td th:text="${m.x}"></td>
+              <td th:text="${m.y}"></td>
+              <td th:text="${m.z}"></td>
+              <td th:text="${m.sprinting}"></td>
+              <td th:text="${m.flying}"></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </th:block>
+    <div class="card" th:unless="${found}">
+      <div class="card-title">未找到</div>
+      <div class="card-body"><p>未找到该事件。</p></div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

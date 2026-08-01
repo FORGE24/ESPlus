@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('二次验证 - ES+')}"></head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="card-title">二次验证 (TOTP)</div>
+    <div class="card-body">
+      <p class="hint">请打开 Google Authenticator / 微软 Authenticator 输入 6 位验证码。</p>
+      <p th:if="${err}" class="flash-err">验证码错误。</p>
+      <form th:action="@{/login/mfa}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <label>验证码<input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="6"/></label>
+        <button type="submit" class="btn-save">确认</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

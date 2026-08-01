@@ -1,0 +1,138 @@
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+
+  This version of the GNU Lesser General Public License incorporates
+the terms and conditions of version 3 of the GNU General Public
+License, supplemented by the additional permissions listed below.
+
+  0. Additional Definitions.
+
+  As used herein, "this License" refers to version 3 of the GNU Lesser
+General Public License, and the "GNU GPL" refers to version 3 of the GNU
+General Public License.
+
+  "The Library" refers to a covered work governed by this License,
+other than an Application or a Combined Work as defined below.
+
+  An "Application" is any work that makes use of an interface provided
+by the Library, but which is not otherwise based on the Library.
+Defining a subclass of a class defined by the Library is deemed a mode
+of using an interface provided by the Library.
+
+  A "Combined Work" is a work produced by combining or linking an
+Application with the Library.  The particular version of the Library
+with which the Combined Work was made is also called the "Linked
+Version".
+
+  The "Minimal Corresponding Source" for a Combined Work means the
+Corresponding Source for the Combined Work, excluding any source code
+for portions of the Combined Work that, considered in isolation, are
+based on the Application, and not on the Linked Version.
+
+  The "Corresponding Application Code" for a Combined Work means the
+object code and/or source code for the Application, including any data
+and utility programs needed for reproducing the Combined Work from the
+Application, but excluding the System Libraries of the Combined Work.
+
+  1. Exception to Section 3 of the GNU GPL.
+
+  You may convey a Combined Work under terms of your choice that,
+without altering any section of the License, preserve the application
+requirement that the Modified Version of the Library be in source code
+form for all users who interact with the Modified Version using a
+remote network server.
+
+  2. Conveying Modified Versions.
+
+  If you modify a copy of the Library, and, in your modifications, a
+facility refers to a function or data to be supplied by an Application
+that uses the facility (other than as an argument passed when the
+facility is called), then you must make a good faith effort to ensure
+that, in the event an Application does not supply such function or
+data, the facility still operates, and performs whatever part of its
+purpose remains meaningful, or you must provide source code and
+installation information for the User to install and run the modified
+version of the Library on their own devices.
+
+  3. Object Code Incorporating Material from Library Header Files.
+
+  The object code form of an Application may incorporate material from
+a header file that is part of the Library.  You may convey such object
+code under terms of your choice, provided that, if the incorporated
+material is not limited to numerical parameters, data structure
+layouts, accessors, macros, inline functions and templates
+(ten or fewer lines in length), you also do so under the terms of the
+GNU LGPL.
+
+  4. Combined Works.
+
+  You may convey a Combined Work under terms of your choice that,
+without altering any section of the License, preserve the application
+requirement that the Combined Work still be governed by the terms of
+this License.
+
+  5. Installation Information.
+
+  You may convey a Combined Work that uses the Library in source code
+form or object code form, under the terms of sections 4 and 5 of the
+GNU GPL, provided that you also meet all of these conditions:
+
+    a) The Minimal Corresponding Source for the Combined Work must be
+    made available under this License.
+
+    b) The Corresponding Application Code must be made available under
+    this License.
+
+    c) You may convey the Combined Work in object code form under the
+    terms of sections 4 and 5 of the GNU GPL, provided that the
+    Corresponding Application Code is available under a license that
+    allows all recipients to copy and modify it under this License.
+
+  6. Revised Versions of the GNU Lesser General Public License.
+
+  The Free Software Foundation may publish revised and/or new versions
+of the GNU Lesser General Public License from time to time. Such new
+versions will be similar in spirit to the present version, but may
+differ in detail to address new problems or concerns.
+
+  Each version is given a distinguishing version number. If the Library
+specifies that a certain numbered version of the GNU Lesser General
+Public License "or any later version" applies to it, you have the option
+of following the terms and conditions either of that version or of any
+later version published by the Free Software Foundation. If the
+Library does not specify a version number, you may choose any version
+of the GNU Lesser General Public License ever published by the Free
+Software Foundation.
+
+  7. Additional Permissions.
+
+  Additional permissions are granted under section 7 of the GNU GPL,
+as allowed by Article 5, provided they are consistent with the GNU
+GPL and this License.
+
+  8. Warranty.
+
+  THE LIBRARY IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  9. Acknowledgement.
+
+  By using this Library, you acknowledge that the GNU Lesser General
+Public License is a copyleft license and that derivative works must be
+licensed under compatible terms.
+
+  The GNU Lesser General Public License is the official license text for
+this project. If you require the exact canonical document, see
+<https://www.gnu.org/licenses/lgpl-3.0.html>.
+
+END OF LICENSE

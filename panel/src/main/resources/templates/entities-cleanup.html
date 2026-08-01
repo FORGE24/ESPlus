@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('一键清理 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('entity-cleanup')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>一键清理</h2><p>危险操作：按类型丢弃实体（不含玩家）。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交清理。</p>
+    <p th:if="${err != null}" class="flash-err">提交失败。</p>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">清理类型</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/entities/cleanup}" method="post" onsubmit="return confirm('确认清理掉落物？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="kind" value="items"/><button type="submit">掉落物</button>
+        </form>
+        <form th:action="@{/entities/cleanup}" method="post" onsubmit="return confirm('确认清理经验球？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="kind" value="xp"/><button type="submit">经验球</button>
+        </form>
+        <form th:action="@{/entities/cleanup}" method="post" onsubmit="return confirm('确认清理敌对生物？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="kind" value="hostile"/><button type="submit" class="danger">敌对</button>
+        </form>
+        <form th:action="@{/entities/cleanup}" method="post" onsubmit="return confirm('确认清理全部生物？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="kind" value="mobs"/><button type="submit" class="danger">全部生物</button>
+        </form>
+        <form th:action="@{/entities/cleanup}" method="post" onsubmit="return confirm('确认清理全部非玩家实体？此操作不可撤销。');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="kind" value="all_non_players"/><button type="submit" class="danger">全非玩家</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">按类型击杀</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>类型</th><th>数量</th><th>操作</th></tr></thead>
+          <tbody>
+          <tr th:each="t : ${entityTypes}">
+            <td class="mono" th:text="${t.entity_type}"></td>
+            <td th:text="${t.count}"></td>
+            <td>
+              <form th:action="@{/entities/kill-type}" method="post" onsubmit="return confirm('击杀该类型全部实体？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="entityType" th:value="${t.entity_type}"/>
+                <button type="submit" class="danger">击杀</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(entityTypes)}"><td colspan="3">暂无类型镜像</td></tr>
+          </tbody>
+        </table>
+        <form th:action="@{/entities/kill-type}" method="post" class="inline-form" style="margin-top:12px" onsubmit="return confirm('击杀？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input name="entityType" placeholder="minecraft:zombie" required/>
+          <button type="submit" class="danger">按 ID 击杀</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

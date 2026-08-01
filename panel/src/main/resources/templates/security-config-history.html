@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('配置变更历史 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('config-history')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>配置变更历史</h2>
+      <p>Gamerule 等变更记录；可回滚到旧值（再入队 set_gamerule）。</p>
+    </div>
+    <p th:if="${msg}" class="flash-ok">已提交回滚。</p>
+    <p th:if="${err}" class="flash-err">失败</p>
+    <div class="card">
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>时间</th><th>操作者</th><th>范围</th><th>键</th><th>旧值</th><th>新值</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="r : ${revisions}">
+            <td th:text="${r.id}"></td>
+            <td th:text="${r.ts}"></td>
+            <td th:text="${r.actor}"></td>
+            <td th:text="${r.scope}"></td>
+            <td th:text="${r.config_key}"></td>
+            <td class="mono" th:text="${r.old_value}"></td>
+            <td class="mono" th:text="${r.new_value}"></td>
+            <td th:if="${r.scope == 'gamerule'}">
+              <form th:action="@{|/security/config-history/${r.id}/rollback|}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit">回滚</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

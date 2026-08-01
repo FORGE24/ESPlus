@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(pageTitle)">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title th:text="${pageTitle}">ES+</title>
+  <link rel="stylesheet" th:href="@{/css/panel.css}"/>
+</head>
+<body>
+<th:block th:fragment="top">
+  <div class="top-header">
+    <h1>ES+ 管理控制台</h1>
+    <div class="user-info">
+      <span>用户：<span sec:authentication="name">admin</span></span>
+      <span>当前时间：<span id="clock">--</span></span>
+      <a th:href="@{/logout}">退出登录</a>
+    </div>
+  </div>
+</th:block>
+
+<aside th:fragment="sidebar(active)">
+  <div class="sidebar">
+    <ul class="sidebar-menu">
+      <li class="menu-title">状态总览</li>
+      <li><a th:href="@{/}" th:classappend="${active == 'dashboard'} ? ' active'">仪表盘</a></li>
+      <li><a th:href="@{/status}" th:classappend="${active == 'status'} ? ' active'">服务总览</a></li>
+      <li><a th:href="@{/status/performance}" th:classappend="${active == 'performance'} ? ' active'">性能监视</a></li>
+      <li><a th:href="@{/status/trends}" th:classappend="${active == 'trends'} ? ' active'">长期趋势</a></li>
+      <li><a th:href="@{/status/connection}" th:classappend="${active == 'connection'} ? ' active'">连接与端口</a></li>
+      <li><a th:href="@{/status/versions}" th:classappend="${active == 'versions'} ? ' active'">模组/版本</a></li>
+
+      <li class="menu-title">玩家与会话</li>
+      <li><a th:href="@{/players}" th:classappend="${active == 'players'} ? ' active'">在线列表</a></li>
+      <li><a th:href="@{/players/profile}" th:classappend="${active == 'profile'} ? ' active'">玩家档案</a></li>
+      <li><a th:href="@{/bans}" th:classappend="${active == 'bans'} ? ' active'">封禁名单</a></li>
+      <li><a th:href="@{/whitelist}" th:classappend="${active == 'whitelist'} ? ' active'">白名单</a></li>
+      <li><a th:href="@{/players/actions}" th:classappend="${active == 'player-actions'} ? ' active'">操场历史</a></li>
+
+      <li class="menu-title">通讯与公告</li>
+      <li><a th:href="@{/messages}" th:classappend="${active == 'messages'} ? ' active'">广播 / 私信</a></li>
+      <li><a th:href="@{/messages/schedule}" th:classappend="${active == 'schedule'} ? ' active'">定时广播</a></li>
+      <li><a th:href="@{/messages/title}" th:classappend="${active == 'title'} ? ' active'">标题字幕</a></li>
+      <li><a th:href="@{/messages/bossbar}" th:classappend="${active == 'bossbar'} ? ' active'">Boss 血条</a></li>
+      <li><a th:href="@{/messages/filter}" th:classappend="${active == 'filter'} ? ' active'">聊天过滤</a></li>
+      <li><a th:href="@{/messages/mute}" th:classappend="${active == 'mute'} ? ' active'">禁言管理</a></li>
+
+      <li class="menu-title">世界与环境</li>
+      <li><a th:href="@{/world/time}" th:classappend="${active == 'world-time'} ? ' active'">时间天气</a></li>
+      <li><a th:href="@{/world/difficulty}" th:classappend="${active == 'world-difficulty'} ? ' active'">难度与模式</a></li>
+      <li><a th:href="@{/world/border}" th:classappend="${active == 'world-border'} ? ' active'">世界边界</a></li>
+      <li><a th:href="@{/world/spawn}" th:classappend="${active == 'world-spawn'} ? ' active'">出生点</a></li>
+      <li><a th:href="@{/world/dimensions}" th:classappend="${active == 'world-dimensions'} ? ' active'">维度总览</a></li>
+
+      <li class="menu-title">游戏规则</li>
+      <li><a th:href="@{/gamerules}" th:classappend="${active == 'gamerules'} ? ' active'">Gamerule 矩阵</a></li>
+
+      <li class="menu-title">实体与清场</li>
+      <li><a th:href="@{/entities}" th:classappend="${active == 'entities'} ? ' active'">实体统计</a></li>
+      <li><a th:href="@{/entities/cleanup}" th:classappend="${active == 'entity-cleanup'} ? ' active'">一键清理</a></li>
+
+      <li class="menu-title">物品与背包</li>
+      <li><a th:href="@{/items/give}" th:classappend="${active == 'give'} ? ' active'">给予物品</a></li>
+      <li><a th:href="@{/items/inventory}" th:classappend="${active == 'inventory'} ? ' active'">背包/末影箱</a></li>
+      <li><a th:href="@{/items/clear}" th:classappend="${active == 'item-clear'} ? ' active'">清空背包</a></li>
+      <li><a th:href="@{/search}" th:classappend="${active == 'search'} ? ' active'">物品溯源入口</a></li>
+
+      <li class="menu-title">权限与安全</li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/admins}" th:classappend="${active == 'admins'} ? ' active'">设置管理员</a>
+      </li>
+      <li><a th:href="@{/security/sudo}" th:classappend="${active == 'sudo-policy'} ? ' active'">sudo 策略</a></li>
+      <li><a th:href="@{/security/accounts}" th:classappend="${active == 'panel-accounts'} ? ' active'">面板账号说明</a></li>
+      <li><a th:href="@{/audit}" th:classappend="${active == 'audit'} ? ' active'">安全审计</a></li>
+      <li><a th:href="@{/alerts}" th:classappend="${active == 'alerts'} ? ' active'">异常告警</a></li>
+
+      <li class="menu-title">安全分析</li>
+      <li><a th:href="@{/security/risk}" th:classappend="${active == 'risk'} ? ' active'">管理员风险评分</a></li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/security/approvals}" th:classappend="${active == 'approvals'} ? ' active'">操作审批</a>
+      </li>
+      <li><a th:href="@{/security/integrity}" th:classappend="${active == 'integrity'} ? ' active'">审计完整性</a></li>
+      <li><a th:href="@{/security/webhooks}" th:classappend="${active == 'webhooks'} ? ' active'">告警通道</a></li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/security/config-history}" th:classappend="${active == 'config-history'} ? ' active'">配置变更历史</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/security/snapshots}" th:classappend="${active == 'snapshots'} ? ' active'">安全快照</a>
+      </li>
+      <li><a th:href="@{/security/economy}" th:classappend="${active == 'economy'} ? ' active'">经济审计</a></li>
+      <li><a th:href="@{/security/mod-sources}" th:classappend="${active == 'mod-sources'} ? ' active'">Mod 来源聚合</a></li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/security/mfa}" th:classappend="${active == 'panel-mfa'} ? ' active'">面板 TOTP</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/security/lockdown}" th:classappend="${active == 'lockdown'} ? ' active'">紧急严打</a>
+      </li>
+      <li><a th:href="@{/center}" th:classappend="${active == 'center'} ? ' active'">本机 Center</a></li>
+
+      <li class="menu-title">名单与访问</li>
+      <li><a th:href="@{/access/ops}" th:classappend="${active == 'ops'} ? ' active'">OP 列表</a></li>
+      <li><a th:href="@{/whitelist}" th:classappend="${active == 'whitelist'} ? ' active'">白名单</a></li>
+      <li><a th:href="@{/bans}" th:classappend="${active == 'bans'} ? ' active'">封禁</a></li>
+      <li><a th:href="@{/access/spectator}" th:classappend="${active == 'spectator'} ? ' active'">旁观者策略</a></li>
+
+      <li class="menu-title">记分板 / 队伍</li>
+      <li><a th:href="@{/scoreboard}" th:classappend="${active == 'scoreboard'} ? ' active'">记分板目标</a></li>
+      <li><a th:href="@{/scoreboard/teams}" th:classappend="${active == 'teams'} ? ' active'">队伍管理</a></li>
+
+      <li class="menu-title">系统维护</li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/console}" th:classappend="${active == 'console'} ? ' active'">游戏控制台</a>
+      </li>
+      <li><a th:href="@{/remote}" th:classappend="${active == 'remote'} ? ' active'">远程运维 / SSH</a></li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/save}" th:classappend="${active == 'save'} ? ' active'">保存与流畅</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/retention}" th:classappend="${active == 'retention'} ? ' active'">数据保留</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/reload}" th:classappend="${active == 'reload'} ? ' active'">重载</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/stop}" th:classappend="${active == 'stop'} ? ' active'">停服</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/maintenance}" th:classappend="${active == 'maintenance'} ? ' active'">维护模式</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/system/schedules}" th:classappend="${active == 'schedules'} ? ' active'">任务调度</a>
+      </li>
+      <li><a th:href="@{/system/runtime}" th:classappend="${active == 'runtime-cfg'} ? ' active'">运行时配置</a></li>
+
+      <li class="menu-title">诊断与日志</li>
+      <li><a th:href="@{/diag/logs}" th:classappend="${active == 'diag-logs'} ? ' active'">服务器日志</a></li>
+      <li><a th:href="@{/diag/actions}" th:classappend="${active == 'diag-actions'} ? ' active'">面板动作诊断</a></li>
+      <li><a th:href="@{/search}" th:classappend="${active == 'search'} ? ' active'">全局搜索</a></li>
+      <li><a th:href="@{/diag/movements}" th:classappend="${active == 'movements'} ? ' active'">移动轨迹</a></li>
+    </ul>
+  </div>
+</aside>
+
+<th:block th:fragment="scripts">
+  <script>
+    (function () {
+      function tick() {
+        var el = document.getElementById('clock');
+        if (el) el.textContent = new Date().toLocaleString();
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
+</th:block>
+</body>
+</html>

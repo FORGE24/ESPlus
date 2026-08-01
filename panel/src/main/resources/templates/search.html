@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('全局搜索 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('search')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>全局搜索</h2>
+      <p>检索玩家、指令、物品与溯源 ID</p>
+    </div>
+    <div class="card">
+      <div class="card-title">搜索条件</div>
+      <div class="card-body">
+        <form class="form-row" method="get" th:action="@{/search}">
+          <input type="text" name="q" placeholder="关键词" th:value="${q}"/>
+          <input type="text" name="category" placeholder="category" th:value="${category}"/>
+          <input type="text" name="actor" placeholder="玩家 UUID/名称" th:value="${actor}"/>
+          <input type="text" name="traceId" placeholder="traceId" th:value="${traceId}"/>
+          <button type="submit">搜索</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">搜索结果</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>类别</th><th>动作</th><th>玩家</th><th>物品</th><th>详情</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="e : ${results}">
+            <td th:text="${e.ts}"></td>
+            <td th:text="${e.category}"></td>
+            <td th:text="${e.action}"></td>
+            <td th:text="${e.actor_name}"></td>
+            <td th:text="${e.item_id}"></td>
+            <td th:text="${e.detail}"></td>
+            <td>
+              <a th:href="@{|/incident/${e.event_id}|}">事发链</a>
+              <a th:if="${e.trace_id != null}" th:href="@{|/trace/${e.trace_id}|}">追溯</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

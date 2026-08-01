@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Boss 血条 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('bossbar')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>Boss 血条</h2><p>创建 / 更新 / 删除自定义 bossbar，默认对全体玩家可见。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <meta http-equiv="refresh" content="10"/>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">创建</div>
+      <div class="card-body">
+        <form th:action="@{/messages/bossbar/create}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">ID</label><input name="id" placeholder="esplus:announce" required/></div>
+          <div class="form-row"><label class="field-cap">名称</label><input name="name" required/></div>
+          <div class="form-row"><label class="field-cap">颜色</label>
+            <select name="color"><option>white</option><option>blue</option><option>red</option><option>green</option><option>yellow</option><option>purple</option><option>pink</option></select>
+          </div>
+          <div class="form-row"><label class="field-cap">最大值</label><input type="number" name="max" value="100" min="1"/></div>
+          <button type="submit">创建</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">现有血条</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>名称</th><th>颜色</th><th>值/最大</th><th>可见</th><th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">操作</th></tr></thead>
+          <tbody>
+          <tr th:each="b : ${bars}">
+            <td class="mono" th:text="${b.id}"></td>
+            <td th:text="${b.name}"></td>
+            <td th:text="${b.color}"></td>
+            <td th:text="|${b.value} / ${b.max_value}|"></td>
+            <td th:text="${b.visible == 1 ? '是' : '否'}"></td>
+            <td sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/messages/bossbar/update}" method="post" class="stack-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${b.id}"/>
+                <input name="name" th:value="${b.name}" placeholder="名称"/>
+                <input type="number" name="value" th:value="${b.value}" placeholder="值"/>
+                <input type="number" name="max" th:value="${b.max_value}" placeholder="最大"/>
+                <select name="color">
+                  <option value="white">white</option><option value="blue">blue</option><option value="red">red</option>
+                  <option value="green">green</option><option value="yellow">yellow</option>
+                  <option value="purple">purple</option><option value="pink">pink</option>
+                </select>
+                <select name="visible"><option value="true">显示</option><option value="false">隐藏</option></select>
+                <button type="submit">更新</button>
+              </form>
+              <form th:action="@{/messages/bossbar/remove}" method="post" onsubmit="return confirm('删除？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${b.id}"/>
+                <button type="submit" class="danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(bars)}"><td colspan="6">暂无 bossbar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

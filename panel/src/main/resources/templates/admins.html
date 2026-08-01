@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('设置管理员 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('admins')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>设置管理员</h2>
+      <p>授予/撤销原版 OP（队列执行）。sudo 密码仍需玩家 /setoppw。</p>
+    </div>
+    <p th:if="${msg == 'unlocked'}" class="flash-ok">已解锁该账户。</p>
+    <p th:if="${msg == 'reset'}" class="flash-ok">已清除 sudo 密码，玩家需重新 /setoppw。</p>
+    <p th:if="${msg == 'role'}" class="flash-ok">角色已更新，并已按角色模板重置指令权限。</p>
+    <p th:if="${msg == 'op_bound'}" class="flash-ok">OP 绑定状态已更新。</p>
+    <p th:if="${msg == 'op_queued'}" class="flash-ok">已提交授予 OP 请求，等待游戏服执行。</p>
+    <p th:if="${msg == 'deop_queued'}" class="flash-ok">已提交撤销 OP 请求，等待游戏服执行。</p>
+    <p th:if="${err != null}" class="flash-err">操作失败，请检查玩家名/UUID 或重试。</p>
+
+    <div class="card">
+      <div class="card-title">原版 OP 操作</div>
+      <div class="card-body">
+        <p class="hint">填写玩家名或 UUID（在线更稳）。</p>
+        <div class="form-row">
+          <form th:action="@{/admins/op/grant}" method="post" class="inline-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="text" name="player" placeholder="玩家名" required/>
+            <input type="text" name="uuid" placeholder="UUID（可选）"/>
+            <button type="submit">授予 OP</button>
+          </form>
+          <form th:action="@{/admins/op/revoke}" method="post" class="inline-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="text" name="player" placeholder="玩家名" required/>
+            <input type="text" name="uuid" placeholder="UUID（可选）"/>
+            <button type="submit" class="danger">撤销 OP</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="stat"><div class="label">登记 sudo 用户</div><div class="value" th:text="${#lists.size(users)}">0</div></div>
+      <div class="stat"><div class="label">当前锁定</div><div class="value" th:text="${lockedCount}">0</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">已登记 sudo 账户</div>
+      <div class="card-body">
+        <table>
+          <thead>
+          <tr><th>名称</th><th>UUID</th><th>角色</th><th>OP绑定</th><th>失败</th><th>锁定至</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+          <tr th:each="u : ${users}">
+            <td th:text="${u.name}"></td>
+            <td class="mono" th:text="${u.uuid}"></td>
+            <td>
+              <form th:action="@{|/admins/${u.uuid}/role|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <select name="role">
+                  <option th:each="r : ${roles}" th:value="${r}" th:text="${r}" th:selected="${r == u.role}"></option>
+                </select>
+                <button type="submit">改角色</button>
+              </form>
+            </td>
+            <td>
+              <form th:action="@{|/admins/${u.uuid}/op-bound|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="opBound" th:value="${u.op_bound == 0}"/>
+                <button type="submit" th:text="${u.op_bound == 1 ? '解除绑定' : '绑定 OP'}"></button>
+              </form>
+            </td>
+            <td th:text="${u.failed_attempts}"></td>
+            <td th:text="${u.locked_until}"></td>
+            <td class="actions">
+              <a class="btn-ghost" th:href="@{|/admins/${u.uuid}/perms|}">指令权限</a>
+              <form th:action="@{/admins/op/grant}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${u.name}"/>
+                <input type="hidden" name="uuid" th:value="${u.uuid}"/>
+                <button type="submit">OP</button>
+              </form>
+              <form th:action="@{/admins/op/revoke}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${u.name}"/>
+                <input type="hidden" name="uuid" th:value="${u.uuid}"/>
+                <button type="submit" class="danger">DeOP</button>
+              </form>
+              <form th:action="@{|/admins/${u.uuid}/unlock|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit">解锁</button>
+              </form>
+              <form th:action="@{|/admins/${u.uuid}/reset|}" method="post" class="inline-form"
+                    onsubmit="return confirm('确认清除该玩家的 sudo 密码？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="danger">重置密码</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(users)}">
+            <td colspan="7">暂无 sudo 用户。可先授予 OP，再让玩家 /setoppw。</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">最近 OP 队列</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>动作</th><th>玩家</th><th>UUID</th><th>状态</th><th>结果</th><th>创建</th><th>处理</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${recentOpActions}">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.action}"></td>
+            <td th:text="${a.target_name}"></td>
+            <td class="mono" th:text="${a.target_uuid}"></td>
+            <td th:text="${a.status}"></td>
+            <td th:text="${a.result}"></td>
+            <td th:text="${a.created_at}"></td>
+            <td th:text="${a.processed_at}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(recentOpActions)}"><td colspan="8">暂无记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

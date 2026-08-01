@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('安全快照 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('snapshots')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>安全快照</h2>
+      <p>保存 gamerule / 难度 / 白名单开关等；恢复将回写 gamerule（高危，可能走审批）。</p>
+    </div>
+    <p th:if="${msg}" class="flash-ok" th:text="${msg}"></p>
+    <form th:action="@{/security/snapshots/create}" method="post" class="inline-form">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <input type="text" name="label" placeholder="标签" required/>
+      <button type="submit">创建快照</button>
+    </form>
+    <div class="card">
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>时间</th><th>操作者</th><th>标签</th><th>大小</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${snapshots}">
+            <td th:text="${s.id}"></td>
+            <td th:text="${s.ts}"></td>
+            <td th:text="${s.actor}"></td>
+            <td th:text="${s.label}"></td>
+            <td th:text="${s.payload_bytes}"></td>
+            <td>
+              <form th:action="@{|/security/snapshots/${s.id}/restore|}" method="post" onsubmit="return confirm('确认恢复该快照？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit">恢复</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

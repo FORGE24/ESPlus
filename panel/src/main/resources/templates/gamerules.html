@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Gamerule 矩阵 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('gamerules')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>Gamerule 矩阵</h2>
+      <p>一规则一控件。修改需 ADMIN，约 1 秒后由游戏服应用并回写镜像。</p>
+    </div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交规则变更。</p>
+    <p th:if="${err != null}" class="flash-err">提交失败，请检查参数或权限。</p>
+    <meta http-equiv="refresh" content="12"/>
+
+    <div class="card" th:each="cat : ${categories}">
+      <div class="card-title" th:text="${cat}">PLAYER</div>
+      <div class="card-body">
+        <table class="rule-matrix">
+          <thead><tr><th>规则</th><th>类型</th><th>当前值</th><th sec:authorize="hasRole('ADMIN')">操作</th></tr></thead>
+          <tbody>
+          <th:block th:each="r : ${rules}" th:if="${r.category == cat}">
+            <tr>
+              <td class="rule-id" th:text="${r.rule_id}"></td>
+              <td th:text="${r.value_type}"></td>
+              <td th:text="${r.value}"></td>
+              <td sec:authorize="hasRole('ADMIN')">
+                <form th:if="${r.value_type == 'bool'}" th:action="@{/gamerules/set}" method="post" class="inline-form">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <input type="hidden" name="ruleId" th:value="${r.rule_id}"/>
+                  <input type="hidden" name="value" th:value="${r.value == 'true' ? 'false' : 'true'}"/>
+                  <button type="submit" th:text="${r.value == 'true' ? '关闭' : '开启'}">切换</button>
+                </form>
+                <form th:if="${r.value_type == 'int'}" th:action="@{/gamerules/set}" method="post" class="inline-form">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <input type="hidden" name="ruleId" th:value="${r.rule_id}"/>
+                  <input type="number" name="value" th:value="${r.value}" style="width:100px"/>
+                  <button type="submit">应用</button>
+                </form>
+              </td>
+            </tr>
+          </th:block>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p th:if="${#lists.isEmpty(rules)}" class="hint">尚无规则镜像。请确认游戏服已启动且快照同步正常。</p>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('面板 TOTP - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('panel-mfa')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>面板二步验证</h2>
+      <p>为当前登录账号启用 TOTP。WebAuthn/YubiKey 预留后续版本。</p>
+    </div>
+    <p th:if="${msg}" class="flash-ok" th:text="${msg}"></p>
+    <p th:if="${err}" class="flash-err">验证失败</p>
+    <div class="card">
+      <div class="card-title">状态</div>
+      <div class="card-body">
+        <p>已启用：<span th:text="${enabled}"></span></p>
+        <form th:unless="${enabled}" th:action="@{/security/mfa/enroll}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit">开始绑定</button>
+        </form>
+        <form th:if="${enabled}" th:action="@{/security/mfa/disable}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="danger">关闭 TOTP</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" th:if="${enrolling}">
+      <div class="card-title">扫码绑定</div>
+      <div class="card-body">
+        <p class="mono" th:text="${secret}"></p>
+        <p class="hint" th:text="${uri}"></p>
+        <p>将上方 otpauth URI 导入 Authenticator，然后输入验证码确认：</p>
+        <form th:action="@{/security/mfa/confirm}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="text" name="code" maxlength="6" required/>
+          <button type="submit">确认启用</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">游戏内 sudo TOTP（按玩家 UUID）</div>
+      <div class="card-body">
+        <form th:action="@{/security/mfa/player/enroll}" method="post" class="inline-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="text" name="uuid" placeholder="玩家 UUID" required/>
+          <button type="submit">生成密钥</button>
+        </form>
+        <th:block th:if="${playerUuid != null}">
+          <p>玩家：<span class="mono" th:text="${playerUuid}"></span></p>
+          <p class="mono" th:text="${secret}"></p>
+          <p class="hint" th:text="${uri}"></p>
+          <form th:action="@{/security/mfa/player/confirm}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="uuid" th:value="${playerUuid}"/>
+            <input type="text" name="code" maxlength="6" required/>
+            <button type="submit">确认启用该玩家 TOTP</button>
+          </form>
+        </th:block>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

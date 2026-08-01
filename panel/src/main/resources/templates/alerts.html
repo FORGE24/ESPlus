@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('异常告警 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('alerts')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>异常告警</h2>
+      <p>规则引擎触发的安全异常</p>
+    </div>
+    <div class="card">
+      <div class="card-title">告警列表</div>
+      <div class="card-body">
+        <div class="form-row">
+          <a class="btn" th:href="@{/alerts(open=true)}">仅未确认</a>
+          <a class="btn-ghost" th:href="@{/alerts(open=false)}">全部</a>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>级别</th><th>规则</th><th>标题</th><th>内容</th><th>玩家</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${alerts}">
+            <td th:text="${a.ts}"></td>
+            <td th:class="'sev-' + ${a.severity}" th:text="${a.severity}"></td>
+            <td th:text="${a.rule_code}"></td>
+            <td th:text="${a.title}"></td>
+            <td th:text="${a.message}"></td>
+            <td th:text="${a.actor_name}"></td>
+            <td>
+              <form th:if="${a.acknowledged == 0}" th:action="@{|/alerts/${a.alert_id}/ack|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit">确认</button>
+              </form>
+              <a th:if="${a.related_event_id != null}" th:href="@{|/incident/${a.related_event_id}|}">事发链</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

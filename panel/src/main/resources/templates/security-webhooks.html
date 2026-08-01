@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('告警通道 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('webhooks')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>实时告警推送</h2>
+      <p>配置项 <code>alertWebhookUrl</code>（Discord Webhook 兼容）。在服务端 toml 中设置后重启。</p>
+    </div>
+    <div class="card">
+      <div class="card-title">通道状态</div>
+      <div class="card-body">
+        <p>已配置：<span th:text="${configured}"></span></p>
+        <p>URL：<span class="mono" th:text="${urlHint}"></span></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">最近投递</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>级别</th><th>规则</th><th>HTTP</th><th>OK</th><th>详情</th></tr></thead>
+          <tbody>
+          <tr th:each="d : ${deliveries}">
+            <td th:text="${d.ts}"></td>
+            <td th:text="${d.severity}"></td>
+            <td th:text="${d.rule_code}"></td>
+            <td th:text="${d.http_status}"></td>
+            <td th:text="${d.ok}"></td>
+            <td th:text="${d.detail}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

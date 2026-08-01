@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('记分板 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('scoreboard')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>记分板目标</h2><p>创建 dummy（或其他 criteria）、侧边栏显示、删除。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <meta http-equiv="refresh" content="10"/>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">创建目标</div>
+      <div class="card-body">
+        <form th:action="@{/scoreboard/add}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">名称</label><input name="name" required pattern="[A-Za-z0-9_]+"/></div>
+          <div class="form-row"><label class="field-cap">准则</label><input name="criteria" value="dummy"/></div>
+          <div class="form-row"><label class="field-cap">显示名</label><input name="displayName"/></div>
+          <button type="submit">创建</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">setdisplay</div>
+      <div class="card-body">
+        <form th:action="@{/scoreboard/display}" method="post" class="inline-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <select name="slot"><option value="sidebar">sidebar</option><option value="list">list</option><option value="below_name">below_name</option></select>
+          <input name="objective" placeholder="目标名（空=清除）"/>
+          <button type="submit">应用</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">设置分数</div>
+      <div class="card-body">
+        <form th:action="@{/scoreboard/set}" method="post" class="inline-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input name="player" placeholder="玩家名" required/>
+          <input name="objective" placeholder="目标名" required/>
+          <input type="number" name="score" value="0" required/>
+          <button type="submit">设分</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">目标列表</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>名称</th><th>准则</th><th>显示名</th><th>显示槽</th><th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">操作</th></tr></thead>
+          <tbody>
+          <tr th:each="o : ${objectives}">
+            <td class="mono" th:text="${o.name}"></td>
+            <td th:text="${o.criteria}"></td>
+            <td th:text="${o.display_name}"></td>
+            <td th:text="${o.display_slot}"></td>
+            <td sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/scoreboard/remove}" method="post" onsubmit="return confirm('删除目标？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="name" th:value="${o.name}"/>
+                <button type="submit" class="danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(objectives)}"><td colspan="5">暂无目标</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

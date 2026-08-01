@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('模组/版本 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('versions')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>模组 / 版本</h2>
+      <p>运行时版本与安全摘要。</p>
+    </div>
+    <div class="card">
+      <div class="card-title">版本信息</div>
+      <div class="card-body kv-grid">
+        <div class="k">Minecraft</div><div class="v" th:text="${runtime.mc_version ?: '--'}">1.21.1</div>
+        <div class="k">NeoForge</div><div class="v" th:text="${runtime.neoforge_version ?: '--'}">--</div>
+        <div class="k">ES+</div><div class="v" th:text="${runtime.mod_version ?: '--'}">--</div>
+        <div class="k">登记用户</div><div class="v" th:text="${usersCount}">0</div>
+        <div class="k">24h 审计</div><div class="v" th:text="${audit24h}">0</div>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

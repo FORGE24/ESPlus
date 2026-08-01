@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('时间天气 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('world-time')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>时间天气</h2>
+      <p>当前白天时间 <span class="mono" th:text="${runtime.day_time ?: 0}">0</span>；下雨
+        <span th:text="${runtime.raining == 1 ? '是' : '否'}">否</span>；雷暴
+        <span th:text="${runtime.thundering == 1 ? '是' : '否'}">否</span>。</p>
+    </div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <p th:if="${err != null}" class="flash-err">提交失败。</p>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">时间预设</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/world/time}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="day"/><button type="submit">白天</button></form>
+        <form th:action="@{/world/time}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="noon"/><button type="submit">正午</button></form>
+        <form th:action="@{/world/time}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="night"/><button type="submit">夜晚</button></form>
+        <form th:action="@{/world/time}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="midnight"/><button type="submit">午夜</button></form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">天气</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/world/weather}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="clear"/><button type="submit">晴</button></form>
+        <form th:action="@{/world/weather}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="rain"/><button type="submit">雨</button></form>
+        <form th:action="@{/world/weather}" method="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/><input type="hidden" name="value" value="thunder"/><button type="submit">雷暴</button></form>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">天气/昼夜锁定</div>
+      <div class="card-body chip-row">
+        <form th:action="@{/world/cycle-lock}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="ruleId" value="doWeatherCycle"/><input type="hidden" name="value" value="false"/>
+          <button type="submit">锁定天气</button>
+        </form>
+        <form th:action="@{/world/cycle-lock}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="ruleId" value="doWeatherCycle"/><input type="hidden" name="value" value="true"/>
+          <button type="submit">解锁天气</button>
+        </form>
+        <form th:action="@{/world/cycle-lock}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="ruleId" value="doDaylightCycle"/><input type="hidden" name="value" value="false"/>
+          <button type="submit">锁定昼夜</button>
+        </form>
+        <form th:action="@{/world/cycle-lock}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="ruleId" value="doDaylightCycle"/><input type="hidden" name="value" value="true"/>
+          <button type="submit">解锁昼夜</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

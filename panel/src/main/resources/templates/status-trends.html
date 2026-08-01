@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('长期趋势 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('trends')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>长期趋势与预测</h2>
+      <p>基于 perf_samples（默认保留 7 天）。非 Prometheus，单服 SQLite 时序。</p>
+    </div>
+    <div class="card">
+      <div class="card-title">预测</div>
+      <div class="card-body" th:text="${forecast.message}">-</div>
+    </div>
+    <div class="card">
+      <div class="card-title">近 24 小时采样数</div>
+      <div class="card-body" th:text="${#lists.size(hours24)}">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">近 7 天采样（节选表）</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ts</th><th>TPS</th><th>MSPT</th><th>玩家</th><th>实体</th></tr></thead>
+          <tbody>
+          <tr th:each="s,iter : ${hours168}" th:if="${iter.index % 20 == 0}">
+            <td th:text="${s.ts}"></td>
+            <td th:text="${s.tps}"></td>
+            <td th:text="${s.mspt_ms}"></td>
+            <td th:text="${s.player_count}"></td>
+            <td th:text="${s.entity_count}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('白名单 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('whitelist')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>白名单</h2>
+      <p>管理原版 whitelist。开启后仅名单内玩家可进入。</p>
+    </div>
+    <p th:if="${msg != null}" class="flash-ok">请求已入队。</p>
+    <p th:if="${err != null}" class="flash-err">操作失败。</p>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">白名单开关</div>
+      <div class="card-body">
+        <table class="info-table">
+          <tr>
+            <th>当前状态</th>
+            <td>
+              <span th:if="${enabled == 1}"><span class="light-green"></span>已开启</span>
+              <span th:unless="${enabled == 1}"><span class="light-red"></span>已关闭</span>
+            </td>
+          </tr>
+        </table>
+        <form th:action="@{/whitelist/toggle}" method="post" class="form-row" style="margin-top:14px">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="enabled" th:value="${enabled != 1}"/>
+          <button type="submit" th:text="${enabled == 1 ? '关闭白名单' : '开启白名单'}">开启</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">添加玩家</div>
+      <div class="card-body">
+        <form th:action="@{/whitelist/add}" method="post" class="form-row">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="text" name="player" placeholder="玩家名" required/>
+          <input type="text" name="uuid" placeholder="UUID（可选）"/>
+          <button type="submit">添加</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">名单</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>名称</th><th>UUID</th><th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">操作</th></tr></thead>
+          <tbody>
+          <tr th:each="e : ${entries}">
+            <td th:text="${e.name}"></td>
+            <td class="mono" th:text="${e.uuid}"></td>
+            <td sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/whitelist/remove}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${e.name}"/>
+                <input type="hidden" name="uuid" th:value="${e.uuid}"/>
+                <button type="submit" class="danger">移除</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(entries)}"><td colspan="3">名单为空</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

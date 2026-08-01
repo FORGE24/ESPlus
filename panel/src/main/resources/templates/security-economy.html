@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('经济审计 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('economy')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>经济事件</h2>
+      <p>薄壳：写入 category=economy 且 detail 含 amount=N 的事件会出现在此；大额自动 HIGH 告警。</p>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>动作</th><th>玩家</th><th>详情</th><th>来源</th></tr></thead>
+          <tbody>
+          <tr th:each="e : ${events}">
+            <td th:text="${e.ts}"></td>
+            <td th:text="${e.action}"></td>
+            <td th:text="${e.actor_name}"></td>
+            <td th:text="${e.detail}"></td>
+            <td th:text="${e.source}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

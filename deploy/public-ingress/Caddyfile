@@ -1,0 +1,6 @@
+# Public VPS: only expose :443. Proxies to the SSH reverse tunnel target on this host.
+# Replace panel.example.com with your domain (DNS A/AAAA -> this VPS).
+
+panel.example.com {
+	reverse_proxy 127.0.0.1:8088
+}

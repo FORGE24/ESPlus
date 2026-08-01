@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('玩家档案 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('profile')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>玩家档案</h2><p>按名或 UUID 查询在线镜像与 sudo 用户记录。</p></div>
+    <div class="card">
+      <div class="card-title">查询</div>
+      <div class="card-body">
+        <form method="get" class="inline-form">
+          <input type="text" name="q" th:value="${q}" placeholder="玩家名 / UUID" required/>
+          <button type="submit">查询</button>
+        </form>
+      </div>
+    </div>
+    <div class="card" th:if="${onlineHit != null}">
+      <div class="card-title">在线镜像</div>
+      <div class="card-body kv-grid">
+        <div class="k">名称</div><div class="v" th:text="${onlineHit.name}"></div>
+        <div class="k">UUID</div><div class="v mono" th:text="${onlineHit.uuid}"></div>
+        <div class="k">维度 / 坐标</div><div class="v mono" th:text="|${onlineHit.dimension} @ ${onlineHit.x}, ${onlineHit.y}, ${onlineHit.z}|"></div>
+        <div class="k">模式 / 延迟</div><div class="v" th:text="|${onlineHit.game_mode} / ${onlineHit.ping}ms|"></div>
+        <div class="k">生命 / 饥饿 / 等级</div><div class="v" th:text="|${onlineHit.health} / ${onlineHit.food} / ${onlineHit.xp_level}|"></div>
+        <div class="k">OP</div><div class="v" th:text="${onlineHit.is_op == 1 ? '是' : '否'}"></div>
+      </div>
+    </div>
+    <div class="card" th:if="${userHit != null}">
+      <div class="card-title">sudo 用户</div>
+      <div class="card-body kv-grid">
+        <div class="k">角色</div><div class="v" th:text="${userHit.role}"></div>
+        <div class="k">OP 绑定</div><div class="v" th:text="${userHit.op_bound}"></div>
+        <div class="k">失败次数</div><div class="v" th:text="${userHit.failed_attempts}"></div>
+        <div class="k">锁定至</div><div class="v" th:text="${userHit.locked_until}"></div>
+      </div>
+    </div>
+    <div class="card" th:if="${muteHit != null}">
+      <div class="card-title">禁言</div>
+      <div class="card-body kv-grid">
+        <div class="k">原因</div><div class="v" th:text="${muteHit.reason}"></div>
+        <div class="k">到期</div><div class="v" th:text="${muteHit.until_ts == 0 ? '永久' : muteHit.until_ts}"></div>
+      </div>
+    </div>
+    <div class="card" th:if="${banHit != null}">
+      <div class="card-title">封禁</div>
+      <div class="card-body kv-grid">
+        <div class="k">原因</div><div class="v" th:text="${banHit.reason}"></div>
+        <div class="k">来源</div><div class="v" th:text="${banHit.source}"></div>
+        <div class="k">到期</div><div class="v" th:text="${banHit.expires_at == 0 ? '永久' : banHit.expires_at}"></div>
+      </div>
+    </div>
+    <div class="card" th:if="${inventory != null and !#lists.isEmpty(inventory)}">
+      <div class="card-title">背包 / 末影箱镜像</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>区</th><th>槽</th><th>物品</th><th>×</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${inventory}">
+            <td th:text="${s.section}"></td>
+            <td th:text="${s.slot}"></td>
+            <td class="mono" th:text="${s.item_id}"></td>
+            <td th:text="${s.count}"></td>
+          </tr>
+          </tbody>
+        </table>
+        <p class="hint">
+          <a th:href="@{/items/inventory(q=${q})}">全部</a> ·
+          <a th:href="@{/items/inventory(q=${q},section=ender)}">仅末影箱</a>
+        </p>
+      </div>
+    </div>
+    <p class="hint" th:if="${q != null and !#strings.isEmpty(q) and onlineHit == null and userHit == null and muteHit == null and banHit == null and (inventory == null or #lists.isEmpty(inventory))}">未找到匹配记录。</p>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

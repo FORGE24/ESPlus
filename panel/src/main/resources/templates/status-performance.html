@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('性能监视 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('performance')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>性能监视</h2>
+      <p>约每秒采样 TPS/MSPT，保留近 30 分钟；本页 8 秒刷新。</p>
+    </div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="grid">
+      <div class="stat"><div class="label">TPS</div><div class="value" th:text="${runtime.tps_approx != null ? #numbers.formatDecimal(runtime.tps_approx,1,2) : '--'}">20</div></div>
+      <div class="stat"><div class="label">MSPT</div><div class="value" th:text="${runtime.mspt_ms != null ? #numbers.formatDecimal(runtime.mspt_ms,1,2) : '--'}">0</div></div>
+      <div class="stat"><div class="label">内存已用 / 最大 (MB)</div><div class="value" th:text="|${runtime.memory_used_mb ?: 0} / ${runtime.memory_max_mb ?: 0}|">0/0</div></div>
+      <div class="stat"><div class="label">实体 / 区块</div><div class="value" th:text="|${runtime.entity_count ?: 0} / ${runtime.chunk_count ?: 0}|">0/0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">卡顿归因（启发式）</div>
+      <div class="card-body">
+        <p th:text="${runtime.entity_share_hint} ?: '暂无提示'"></p>
+        <p class="hint"><a th:href="@{/entities/cleanup}">前往实体清理</a></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">TPS 历史（近 2 分钟）</div>
+      <div class="card-body">
+        <div class="spark" th:if="${!#lists.isEmpty(samples)}">
+          <div th:each="s : ${samples}" class="spark-bar tps" th:style="|height:${s.tps_pct}%|"
+               th:title="|TPS ${#numbers.formatDecimal(s.tps,1,2)} / MSPT ${#numbers.formatDecimal(s.mspt_ms,1,2)}|"></div>
+        </div>
+        <p class="hint" th:if="${#lists.isEmpty(samples)}">尚无采样数据，请确认游戏服已启动约 1 分钟。</p>
+        <div class="spark spark-mspt" th:if="${!#lists.isEmpty(samples)}">
+          <div th:each="s : ${samples}" class="spark-bar mspt" th:style="|height:${s.mspt_pct}%|"
+               th:title="|MSPT ${#numbers.formatDecimal(s.mspt_ms,1,2)}|"></div>
+        </div>
+        <p class="hint">上图 TPS（满高=20）；下图 MSPT（满高≈50ms）。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">最近采样</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间戳</th><th>TPS</th><th>MSPT</th><th>内存MB</th><th>实体</th><th>在线</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${recentSamples}">
+            <td class="mono" th:text="${s.ts}"></td>
+            <td th:text="${#numbers.formatDecimal(s.tps,1,2)}"></td>
+            <td th:text="${#numbers.formatDecimal(s.mspt_ms,1,2)}"></td>
+            <td th:text="${s.memory_used_mb}"></td>
+            <td th:text="${s.entity_count}"></td>
+            <td th:text="${s.player_count}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(recentSamples)}"><td colspan="6">暂无</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">维度负载</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>维度</th><th>玩家</th><th>实体</th><th>区块</th><th>时间</th><th>下雨</th></tr></thead>
+          <tbody>
+          <tr th:each="d : ${dimensions}">
+            <td class="mono" th:text="${d.dimension}"></td>
+            <td th:text="${d.player_count}"></td>
+            <td th:text="${d.entity_count}"></td>
+            <td th:text="${d.chunk_count}"></td>
+            <td th:text="${d.day_time}"></td>
+            <td th:text="${d.raining == 1 ? '是' : '否'}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(dimensions)}"><td colspan="6">暂无镜像数据，请确认游戏服已启动。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">玩家延迟</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>玩家</th><th>延迟(ms)</th><th>维度</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td th:text="${p.name}"></td>
+            <td th:text="${p.ping}"></td>
+            <td th:text="${p.dimension}"></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(online)}"><td colspan="3">无在线玩家</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('清空背包 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('item-clear')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>清空背包</h2><p>清空目标玩家主背包（不含末影箱，后续可扩）。</p></div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交。</p>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">选择玩家</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>玩家</th><th>操作</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td th:text="${p.name}"></td>
+            <td>
+              <form th:action="@{/items/clear}" method="post" class="inline-form" onsubmit="return confirm('确认清空？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/>
+                <input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <button type="submit" class="danger">清空背包</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(online)}"><td colspan="2">无在线玩家</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">手动清空（含末影箱）</div>
+      <div class="card-body">
+        <form th:action="@{/items/clear}" method="post" class="inline-form" style="margin-bottom:10px" onsubmit="return confirm('清空背包？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input name="player" placeholder="玩家名" required/>
+          <button type="submit" class="danger">清空背包</button>
+        </form>
+        <form th:action="@{/players/clear-ender}" method="post" class="inline-form" onsubmit="return confirm('清空末影箱？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input name="player" placeholder="玩家名" required/>
+          <button type="submit" class="danger">清空末影箱</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

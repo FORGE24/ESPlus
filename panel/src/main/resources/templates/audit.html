@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('安全审计 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('audit')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>安全审计</h2>
+      <p>设密 · sudo · 门禁 · 面板操作记录。可导出 CSV，并可按保留天数清理。</p>
+    </div>
+    <p th:if="${msg == 'cleanup_queued'}" class="flash-ok">清理任务已入队。</p>
+    <p th:if="${err != null}" class="flash-err">操作失败。</p>
+
+    <div class="card">
+      <div class="card-title">筛选与导出</div>
+      <div class="card-body">
+        <form method="get" th:action="@{/audit}" class="form-row">
+          <input type="text" name="action" placeholder="action" th:value="${action}"/>
+          <input type="text" name="uuid" placeholder="player uuid" th:value="${uuid}"/>
+          <select name="success">
+            <option value="">全部结果</option>
+            <option value="true" th:selected="${success == true}">成功</option>
+            <option value="false" th:selected="${success == false}">失败</option>
+          </select>
+          <button type="submit">筛选</button>
+          <a class="btn-ghost" th:href="@{/audit/export(action=${action}, uuid=${uuid}, success=${success})}">导出 CSV</a>
+        </form>
+        <form th:action="@{/audit/cleanup}" method="post" class="form-row" sec:authorize="hasRole('ADMIN')"
+              onsubmit="return confirm('确认按保留天数清理旧日志？');">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="number" name="days" min="1" max="3650" placeholder="天数（空=用配置）"/>
+          <button type="submit" class="danger">清理旧数据</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">审计记录</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>UUID</th><th>动作</th><th>详情</th><th>结果</th></tr></thead>
+          <tbody>
+          <tr th:each="l : ${logs}">
+            <td th:text="${l.ts}"></td>
+            <td th:text="${l.uuid}"></td>
+            <td th:text="${l.action}"></td>
+            <td th:text="${l.detail}"></td>
+            <td th:text="${l.success == 1 ? 'OK' : 'FAIL'}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

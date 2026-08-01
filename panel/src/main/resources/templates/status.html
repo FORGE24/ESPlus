@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('服务总览 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('status')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>服务总览</h2>
+      <p>由游戏服每秒同步镜像；本页约 8 秒自动刷新。</p>
+    </div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="grid">
+      <div class="stat"><div class="label">TPS 近似</div><div class="value" th:text="${runtime.tps_approx != null ? #numbers.formatDecimal(runtime.tps_approx,1,2) : '--'}">20</div></div>
+      <div class="stat"><div class="label">MSPT (ms)</div><div class="value" th:text="${runtime.mspt_ms != null ? #numbers.formatDecimal(runtime.mspt_ms,1,2) : '--'}">0</div></div>
+      <div class="stat"><div class="label">在线 / 上限</div><div class="value" th:text="|${runtime.player_count ?: 0} / ${runtime.max_players ?: 0}|">0/0</div></div>
+      <div class="stat"><div class="label">世界数</div><div class="value" th:text="${runtime.world_count ?: 0}">0</div></div>
+      <div class="stat"><div class="label">白名单</div><div class="value" th:text="${runtime.whitelist_enabled == 1 ? '开' : '关'}">关</div></div>
+      <div class="stat"><div class="label">未确认告警</div><div class="value" th:text="${alertsOpen}">0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">TPS 走势（近 1 分钟）</div>
+      <div class="card-body">
+        <div class="spark" th:if="${tpsSamples != null and !#lists.isEmpty(tpsSamples)}">
+          <div th:each="s : ${tpsSamples}" class="spark-bar tps" th:style="|height:${s.tps_pct}%|"
+               th:title="|TPS ${#numbers.formatDecimal(s.tps,1,2)}|"></div>
+        </div>
+        <p class="hint" th:if="${tpsSamples == null or #lists.isEmpty(tpsSamples)}">尚无采样。</p>
+        <p class="hint"><a th:href="@{/status/performance}">性能监视</a></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">运行快照</div>
+      <div class="card-body kv-grid">
+        <div class="k">面板绑定</div><div class="v" th:text="|${panelBind}:${panelPort}|">127.0.0.1:8088</div>
+        <div class="k">游戏端口</div><div class="v" th:text="${runtime.game_port ?: '--'}">25565</div>
+        <div class="k">难度</div><div class="v" th:text="${runtime.difficulty ?: '--'}">--</div>
+        <div class="k">白天时间</div><div class="v" th:text="${runtime.day_time ?: 0}">0</div>
+        <div class="k">运行 ticks</div><div class="v" th:text="${runtime.uptime_ticks ?: 0}">0</div>
+        <div class="k">镜像时间</div><div class="v mono" th:text="${runtime.updated_at ?: 0}">0</div>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

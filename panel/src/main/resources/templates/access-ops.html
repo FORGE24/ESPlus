@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('OP 列表 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('ops')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>OP 列表镜像</h2><p>在线 OP 可一键 DeOP；完整管理见管理员页。</p></div>
+    <p th:if="${msg == 'deop_queued'}" class="flash-ok">已提交 DeOP。</p>
+    <p th:if="${err != null}" class="flash-err">失败。</p>
+    <div class="card">
+      <div class="card-title">在线（含 OP 标记）</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>名称</th><th>UUID</th><th>OP</th><th sec:authorize="hasRole('ADMIN')">快捷</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${online}">
+            <td th:text="${p.name}"></td>
+            <td class="mono" th:text="${p.uuid}"></td>
+            <td th:text="${p.is_op == 1 ? '是' : '否'}"></td>
+            <td sec:authorize="hasRole('ADMIN')">
+              <form th:if="${p.is_op == 1}" th:action="@{/access/ops/deop}" method="post" class="inline-form" onsubmit="return confirm('DeOP？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${p.name}"/>
+                <input type="hidden" name="uuid" th:value="${p.uuid}"/>
+                <button type="submit" class="danger">DeOP</button>
+              </form>
+              <a th:href="@{/admins}">管理员页</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">登记用户</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>名称</th><th>角色</th><th>OP 绑定</th><th sec:authorize="hasRole('ADMIN')">DeOP</th></tr></thead>
+          <tbody>
+          <tr th:each="u : ${users}">
+            <td th:text="${u.name}"></td>
+            <td th:text="${u.role}"></td>
+            <td th:text="${u.op_bound}"></td>
+            <td sec:authorize="hasRole('ADMIN')">
+              <form th:action="@{/access/ops/deop}" method="post" class="inline-form" onsubmit="return confirm('DeOP？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="player" th:value="${u.name}"/>
+                <input type="hidden" name="uuid" th:value="${u.uuid}"/>
+                <button type="submit" class="danger">DeOP</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

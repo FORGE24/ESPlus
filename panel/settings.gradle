@@ -1,0 +1,9 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        maven { url = 'https://mirrors.huaweicloud.com/repository/maven-public' }
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'esplus-panel'

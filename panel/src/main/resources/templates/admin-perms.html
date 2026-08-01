@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('指令权限 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('admins')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>指令权限</h2>
+      <p th:text="${user.name} + ' · ' + ${user.uuid} + ' · role=' + ${user.role}"></p>
+    </div>
+    <p th:if="${param.saved}" class="flash-ok">权限已保存。未勾选的指令即使 OP + sudo 也不可用。</p>
+
+    <div class="card">
+      <div class="card-title">角色模板</div>
+      <div class="card-body">
+        <form th:action="@{|/admins/${uuid}/perms/reset-role|}" method="post" class="form-row">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="role" th:value="${user.role}"/>
+          <button type="submit">按当前角色模板重置</button>
+          <a class="btn-ghost" th:href="@{/admins}">返回</a>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">逐项授权</div>
+      <div class="card-body">
+        <form th:action="@{|/admins/${uuid}/perms|}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <table>
+            <thead><tr><th>启用</th><th>权限键</th><th>说明</th></tr></thead>
+            <tbody>
+            <tr th:each="p : ${perms}">
+              <td><input type="checkbox" name="perm" th:value="${p.perm}" th:checked="${p.allowed}"/></td>
+              <td class="mono" th:text="${p.perm}"></td>
+              <td th:text="${p.label}"></td>
+            </tr>
+            </tbody>
+          </table>
+          <div class="form-row" style="margin-top:16px">
+            <button type="submit">保存权限</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

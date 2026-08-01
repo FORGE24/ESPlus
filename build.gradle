@@ -1,0 +1,222 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.1.38'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = mod_version
+group = mod_group_id
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+    exclude("**/*.bbmodel")
+    exclude("src/generated/**/.cache")
+}
+
+repositories {
+    maven { url = 'https://mirrors.huaweicloud.com/repository/maven-public' }
+    maven { url = 'https://maven.neoforged.net/releases' }
+    mavenCentral()
+}
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        workingDirectory project.layout.projectDirectory.dir('run').dir(name)
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+
+    gameTestServer {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    data {
+        arguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+    embed
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+
+    // compileOnly: visible to javac, but NOT as a separate NeoForge module jar.
+    // embed: unpacked into the mod's own output so ModuleClassLoader can load org.sqlite.*.
+    // jBCrypt is vendored as source (src/main/java/org/mindrot/jbcrypt) — do not embed the jar,
+    // otherwise userdev may miss it while linking BcryptPasswordService.
+    compileOnly "org.xerial:sqlite-jdbc:3.46.1.3"
+    embed "org.xerial:sqlite-jdbc:3.46.1.3"
+
+    testImplementation "org.xerial:sqlite-jdbc:3.46.1.3"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+def embeddedLibsDir = layout.buildDirectory.dir('generated/embeddedLibs')
+
+tasks.register('embedLibraries', Sync) {
+    from {
+        configurations.embed.collect { zipTree(it) }
+    }
+    into embeddedLibsDir
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/MANIFEST.MF', 'META-INF/versions/**'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Make embedded .class/.dll part of the mod source set output (dev runs + jar).
+sourceSets.main.output.dir(embeddedLibsDir, builtBy: 'embedLibraries')
+
+tasks.named('compileJava', JavaCompile).configure {
+    dependsOn('embedLibraries')
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+    dependsOn('embedLibraries')
+}
+
+// Build Spring Boot panel (independent Gradle project) and embed the fat jar into mod resources.
+tasks.register('buildSpringPanel', Exec) {
+    workingDir = rootProject.projectDir
+    def isWindows = System.getProperty('os.name').toLowerCase().contains('windows')
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'gradlew.bat', '-p', 'panel', 'bootJar', '--no-daemon', '--no-configuration-cache'
+    } else {
+        commandLine './gradlew', '-p', 'panel', 'bootJar', '--no-daemon', '--no-configuration-cache'
+    }
+    onlyIf {
+        def libs = file('panel/build/libs')
+        if (!libs.exists()) {
+            return true
+        }
+        def jars = libs.listFiles().findAll { it.name.startsWith('esplus-panel') && it.name.endsWith('.jar') && !it.name.contains('plain') }
+        return jars.isEmpty()
+    }
+}
+
+def panelResourceDir = layout.buildDirectory.dir('generated/panelResource/META-INF/esplus')
+
+tasks.register('embedSpringPanel', Copy) {
+    dependsOn 'buildSpringPanel'
+    from(fileTree('panel/build/libs') {
+        include 'esplus-panel-*.jar'
+        exclude '*-plain.jar'
+    })
+    into panelResourceDir
+    rename { String fileName -> 'esplus-panel.jar' }
+    doFirst {
+        def libs = file('panel/build/libs')
+        def jars = libs.exists() ? libs.listFiles().findAll { it.name.startsWith('esplus-panel') && it.name.endsWith('.jar') && !it.name.contains('plain') } : []
+        if (jars.isEmpty()) {
+            throw new GradleException("Spring panel jar missing. Run: gradlew -p panel bootJar")
+        }
+    }
+}
+
+def nativePwpromptDist = file('native/pwprompt/dist')
+def nativeResourceDir = layout.buildDirectory.dir('generated/nativeResource/META-INF/esplus')
+
+tasks.register('packageNativePwprompt', Zip) {
+    archiveFileName = 'esplus-pwprompt-win64.zip'
+    destinationDirectory = nativeResourceDir
+    from(nativePwpromptDist)
+    onlyIf { nativePwpromptDist.exists() && new File(nativePwpromptDist, 'esplus-pwprompt.exe').exists() }
+    doFirst {
+        if (!nativePwpromptDist.exists() || !new File(nativePwpromptDist, 'esplus-pwprompt.exe').exists()) {
+            logger.warn('Qt pwprompt dist missing. Run native/build-pwprompt.bat (dev fallback still works).')
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir(layout.buildDirectory.dir('generated/panelResource'))
+sourceSets.main.resources.srcDir(layout.buildDirectory.dir('generated/nativeResource'))
+
+tasks.named('processResources', ProcessResources).configure {
+    dependsOn('embedSpringPanel', 'packageNativePwprompt')
+}
+
+tasks.named('classes').configure {
+    dependsOn('embedLibraries', 'embedSpringPanel', 'packageNativePwprompt')
+}
+
+tasks.named('jar', Jar).configure {
+    archiveClassifier = ''
+    dependsOn('embedLibraries', 'embedSpringPanel', 'packageNativePwprompt')
+}
+
+tasks.matching { it.name.toLowerCase().contains('runserver') || it.name.toLowerCase().contains('runclient') || it.name.toLowerCase().contains('preparerun') }.configureEach {
+    dependsOn('embedLibraries', 'embedSpringPanel', 'packageNativePwprompt', 'classes')
+}
+
+tasks.register('copyPanelJar', Copy) {
+    dependsOn 'buildSpringPanel'
+    from('panel/build/libs')
+    into(layout.projectDirectory.dir('esplus/panel'))
+    include 'esplus-panel-*.jar'
+    exclude '*-plain.jar'
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

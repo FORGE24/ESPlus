@@ -1,0 +1,14 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://mirrors.huaweicloud.com/repository/maven-public' }
+        maven { url = 'https://maven.neoforged.net/releases' }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+}
+
+rootProject.name = 'ESPlus'

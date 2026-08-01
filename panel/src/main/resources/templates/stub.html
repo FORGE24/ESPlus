@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2 th:text="${title}">功能页</h2>
+      <p th:text="${hint}">占位说明</p>
+    </div>
+    <div class="card">
+      <div class="card-title">说明</div>
+      <div class="card-body">
+        <p class="hint" th:text="${hint}">此页已挂入侧栏，完整表单将在后续迭代补齐。</p>
+        <p><a th:href="@{/console}">前往游戏控制台</a> · <a th:href="@{/}">返回仪表盘</a></p>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

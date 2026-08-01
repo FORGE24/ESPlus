@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('停服 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('stop')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>停服</h2></div>
+    <div class="warn-box">将停止 Minecraft 服务器进程。需两次输入 STOP 确认。面板进程可能随后退出。</div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">已提交停服请求。</p>
+    <p th:if="${err == 'confirm'}" class="flash-err">双确认未通过。</p>
+    <div class="card" sec:authorize="hasRole('ADMIN')">
+      <div class="card-title">双确认停服</div>
+      <div class="card-body">
+        <form th:action="@{/system/stop}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">确认 1</label><input type="text" name="confirm1" placeholder="STOP" required/></div>
+          <div class="form-row"><label class="field-cap">确认 2</label><input type="text" name="confirm2" placeholder="STOP" required/></div>
+          <button type="submit" class="danger">停止服务器</button>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

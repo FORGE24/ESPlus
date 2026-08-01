@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('聊天过滤 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('filter')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>聊天过滤</h2><p>敏感词直接写入 SQLite；游戏服聊天事件命中后拦截并提示。</p></div>
+    <p th:if="${msg != null}" class="flash-ok">已更新。</p>
+    <p th:if="${err != null}" class="flash-err">失败（可能重复）。</p>
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">添加敏感词</div>
+      <div class="card-body">
+        <form th:action="@{/messages/filter/add}" method="post" class="inline-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input name="word" maxlength="64" placeholder="敏感词" required/>
+          <button type="submit">添加</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">词表</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>词</th><th>启用</th><th sec:authorize="hasAnyRole('ADMIN','MODERATOR')">操作</th></tr></thead>
+          <tbody>
+          <tr th:each="w : ${words}">
+            <td th:text="${w.id}"></td>
+            <td th:text="${w.word}"></td>
+            <td th:text="${w.enabled == 1 ? '是' : '否'}"></td>
+            <td class="dense-actions" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+              <form th:action="@{/messages/filter/toggle}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${w.id}"/>
+                <input type="hidden" name="enabled" th:value="${w.enabled == 1 ? 'false' : 'true'}"/>
+                <button type="submit" th:text="${w.enabled == 1 ? '禁用' : '启用'}">切换</button>
+              </form>
+              <form th:action="@{/messages/filter/delete}" method="post" onsubmit="return confirm('删除？');">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <input type="hidden" name="id" th:value="${w.id}"/>
+                <button type="submit" class="danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(words)}"><td colspan="4">暂无敏感词</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

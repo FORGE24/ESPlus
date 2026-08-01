@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('移动记录 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('search')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>玩家移动记录</h2>
+      <p th:text="'player = ' + ${player}"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">轨迹点</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>时间</th><th>维度</th><th>X</th><th>Y</th><th>Z</th><th>yaw</th><th>pitch</th></tr></thead>
+          <tbody>
+          <tr th:each="m : ${movements}">
+            <td th:text="${m.ts}"></td>
+            <td th:text="${m.dimension}"></td>
+            <td th:text="${m.x}"></td>
+            <td th:text="${m.y}"></td>
+            <td th:text="${m.z}"></td>
+            <td th:text="${m.yaw}"></td>
+            <td th:text="${m.pitch}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

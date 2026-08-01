@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('sudo 策略 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('sudo-policy')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>sudo 策略（只读）</h2><p>来自游戏服 toml / 运行时镜像；修改请编辑 config/esplus-common.toml 后重启。</p></div>
+    <div class="card">
+      <div class="card-title">会话与锁定</div>
+      <div class="card-body kv-grid">
+        <div class="k">sudo 会话（分钟）</div><div class="v" th:text="${sudoMinutes}">5</div>
+        <div class="k">最大失败次数</div><div class="v" th:text="${maxFailed}">5</div>
+        <div class="k">锁定时长（分钟）</div><div class="v" th:text="${lockMinutes}">15</div>
+        <div class="k">审计保留（天）</div><div class="v" th:text="${retentionDays}">30</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">受保护命令</div>
+      <div class="card-body">
+        <pre class="mono" th:text="${protectedCommands}">give, gamemode, ...</pre>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

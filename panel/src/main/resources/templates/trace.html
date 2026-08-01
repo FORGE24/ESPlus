@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('物品追溯 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('search')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>物品来源链</h2>
+      <p th:text="'traceId = ' + ${traceId}"></p>
+    </div>
+    <th:block th:if="${found}">
+      <div class="card">
+        <div class="card-title">起源</div>
+        <div class="card-body"><pre class="mono" th:text="${trace}"></pre></div>
+      </div>
+      <div class="card" th:if="${nodes != null}">
+        <div class="card-title">物品关系图</div>
+        <div class="card-body">
+          <svg th:attr="viewBox='0 0 640 ' + (${#lists.size(nodes)} * 56 + 40)" width="100%" style="max-width:720px;background:#0f1419">
+            <th:block th:each="n,iter : ${nodes}">
+              <rect th:attr="x=40,y=${iter.index * 56 + 16},width=560,height=40" rx="4" fill="#1c2530" stroke="#3d4f63"/>
+              <text th:attr="x=56,y=${iter.index * 56 + 42}" fill="#d7e0ea" font-size="13" th:text="${n.label}"></text>
+            </th:block>
+            <th:block th:each="e,iter : ${edges}" th:if="${iter.index + 1 < #lists.size(nodes)}">
+              <line th:attr="x1=320,y1=${iter.index * 56 + 56},x2=320,y2=${(iter.index + 1) * 56 + 16}"
+                    stroke="#6b8cab" stroke-width="2"/>
+            </th:block>
+          </svg>
+          <p class="hint">节点自上而下为起源 → 物品 → 链路事件。</p>
+        </div>
+      </div>
+      <div class="card" th:if="${geoEvents != null && !#lists.isEmpty(geoEvents)}">
+        <div class="card-title">流转坐标（地图式时间线）</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>时间</th><th>动作</th><th>玩家</th><th>维度</th><th>X</th><th>Y</th><th>Z</th></tr></thead>
+            <tbody>
+            <tr th:each="g : ${geoEvents}">
+              <td th:text="${g.ts}"></td>
+              <td th:text="${g.action}"></td>
+              <td th:text="${g.actor_name}"></td>
+              <td th:text="${g.dimension}"></td>
+              <td th:text="${g.x}"></td>
+              <td th:text="${g.y}"></td>
+              <td th:text="${g.z}"></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">链路节点</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>时间</th><th>动作</th><th>玩家</th><th>详情</th><th>父链</th></tr></thead>
+            <tbody>
+            <tr th:each="l : ${links}">
+              <td th:text="${l.ts}"></td>
+              <td th:text="${l.action}"></td>
+              <td th:text="${l.actor_name}"></td>
+              <td th:text="${l.detail}"></td>
+              <td th:text="${l.parent_trace_id}"></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">关联事件</div>
+        <div class="card-body">
+          <table>
+            <thead><tr><th>时间</th><th>动作</th><th>玩家</th><th>详情</th></tr></thead>
+            <tbody>
+            <tr th:each="e : ${events}">
+              <td th:text="${e.ts}"></td>
+              <td th:text="${e.action}"></td>
+              <td th:text="${e.actor_name}"></td>
+              <td th:text="${e.detail}"></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </th:block>
+    <div class="card" th:unless="${found}">
+      <div class="card-title">未找到</div>
+      <div class="card-body"><p>未找到该溯源 ID。</p></div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

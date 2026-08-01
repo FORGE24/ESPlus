@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('操场历史 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('player-actions')}"></div>
+  <main class="main-content">
+    <div class="page-heading"><h2>操场历史</h2><p>踢封 / 广播 / 玩家运维相关面板动作。</p></div>
+    <meta http-equiv="refresh" content="8"/>
+    <div class="card">
+      <div class="card-title">最近 50 条</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>动作</th><th>目标</th><th>载荷</th><th>状态</th><th>结果</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${actions}">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.action}"></td>
+            <td th:text="${a.target_name ?: a.target_uuid}"></td>
+            <td th:text="${a.payload}"></td>
+            <td th:text="${a.status}"></td>
+            <td th:text="${a.result}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

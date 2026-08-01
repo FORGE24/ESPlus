@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('运维调度 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('schedules')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>Cron 式任务调度</h2>
+      <p>支持 broadcast / save_all / restart_hint / kill_entities / create_security_snapshot / maintenance_kick / lockdown_on。</p>
+    </div>
+    <div class="card">
+      <div class="card-title">新建任务</div>
+      <div class="card-body">
+        <form th:action="@{/system/schedules/create}" method="post" class="mod-form">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="form-row"><label class="field-cap">类型</label>
+            <select name="kind">
+              <option value="broadcast">broadcast</option>
+              <option value="save_all">save_all</option>
+              <option value="restart_hint">restart_hint</option>
+              <option value="kill_entities">kill_entities</option>
+              <option value="create_security_snapshot">create_security_snapshot</option>
+              <option value="maintenance_kick">maintenance_kick</option>
+            </select>
+          </div>
+          <div class="form-row"><label class="field-cap">载荷</label><input type="text" name="payload" placeholder="广播文本 / items / 标签"/></div>
+          <div class="form-row"><label class="field-cap">延迟秒</label><input type="number" name="delaySeconds" value="60"/></div>
+          <div class="form-row"><label class="field-cap">周期秒(0=一次)</label><input type="number" name="intervalSeconds" value="0"/></div>
+          <div class="form-row"><label class="field-cap">备注</label><input type="text" name="note"/></div>
+          <button type="submit">创建</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>类型</th><th>载荷</th><th>周期</th><th>下次</th><th>启用</th><th>备注</th></tr></thead>
+          <tbody>
+          <tr th:each="s : ${schedules}">
+            <td th:text="${s.id}"></td>
+            <td th:text="${s.kind}"></td>
+            <td class="mono" th:text="${s.payload}"></td>
+            <td th:text="${s.interval_seconds}"></td>
+            <td th:text="${s.next_run_at}"></td>
+            <td th:text="${s.enabled}"></td>
+            <td th:text="${s.note}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

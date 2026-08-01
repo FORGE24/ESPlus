@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('游戏控制台 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('console')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>游戏控制台</h2>
+      <p>查看运行日志，并下发控制台指令（经队列由模组执行）。</p>
+    </div>
+    <p th:if="${msg == 'queued'}" class="flash-ok">指令已入队，约 1 秒内执行。</p>
+    <p th:if="${msg == 'failed'}" class="flash-err">指令提交失败。</p>
+
+    <div class="card">
+      <div class="card-title">实时日志</div>
+      <div class="card-body">
+        <form class="form-row" method="get" th:action="@{/console}">
+          <select name="level">
+            <option value="">全部级别</option>
+            <option value="DEBUG" th:selected="${level == 'DEBUG'}">DEBUG</option>
+            <option value="INFO" th:selected="${level == 'INFO'}">INFO</option>
+            <option value="WARN" th:selected="${level == 'WARN'}">WARN</option>
+            <option value="ERROR" th:selected="${level == 'ERROR'}">ERROR</option>
+          </select>
+          <input type="text" name="q" placeholder="搜索日志" th:value="${q}"/>
+          <button type="submit">筛选</button>
+          <a class="btn-ghost" th:href="@{/console}">刷新</a>
+        </form>
+        <div id="logbox" class="logbox">
+          <div th:each="l : ${logs}" th:class="'log-' + ${l.level}">
+            <span class="log-meta" th:text="${l.id} + ' ' + ${l.level} + ' ' + ${l.logger}"></span>
+            <span th:text="${l.message}"></span>
+          </div>
+          <div th:if="${#lists.isEmpty(logs)}" class="log-meta">暂无日志。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">发送控制台指令</div>
+      <div class="card-body">
+        <form th:action="@{/console/cmd}" method="post" class="form-row">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="text" name="command" placeholder="例如: list 或 say hello" style="flex:1; min-width:240px; width:auto" required/>
+          <button type="submit">执行</button>
+        </form>
+        <p class="hint">以服务端控制台权限执行，请谨慎使用危险指令。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">指令历史</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>指令</th><th>状态</th><th>结果</th><th>创建</th><th>处理</th></tr></thead>
+          <tbody>
+          <tr th:each="c : ${commands}">
+            <td th:text="${c.id}"></td>
+            <td class="mono" th:text="${c.payload}"></td>
+            <td th:text="${c.status}"></td>
+            <td th:text="${c.result}"></td>
+            <td th:text="${c.created_at}"></td>
+            <td th:text="${c.processed_at}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+  setTimeout(function () {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('msg');
+    const qs = params.toString();
+    window.location.replace('/console' + (qs ? ('?' + qs) : ''));
+  }, 3000);
+</script>
+</body>
+</html>

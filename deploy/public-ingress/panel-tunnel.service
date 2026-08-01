@@ -1,0 +1,29 @@
+# systemd unit for the PANEL SERVER (machine running Minecraft + Spring panel).
+# Copies to: /etc/systemd/system/seminecraft-panel-tunnel.service
+#
+# Prerequisites:
+#   - autossh installed
+#   - SSH key auth to the public VPS as user `seminecraft-tunnel`
+#   - Panel bound to 127.0.0.1:8088 (mod config panelBindAddress)
+
+[Unit]
+Description=SEMinecraft panel SSH reverse tunnel to public ingress
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=minecraft
+Environment=AUTOSSH_GATETIME=0
+ExecStart=/usr/bin/autossh -M 0 -N \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o ExitOnForwardFailure=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -R 127.0.0.1:8088:127.0.0.1:8088 \
+  seminecraft-tunnel@PUBLIC_VPS_IP
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

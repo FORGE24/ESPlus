@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('操作审批 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('approvals')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>管理操作审批</h2>
+      <p th:text="${approvalEnabled} ? '高危操作需 Owner/ADMIN 审批后才会入队执行。' : '审批已关闭，高危操作直接入队。'"></p>
+    </div>
+    <p th:if="${msg}" class="flash-ok" th:text="${msg}"></p>
+    <p th:if="${err}" class="flash-err">操作失败</p>
+    <div class="card">
+      <div class="card-title">工单列表</div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>ID</th><th>申请人</th><th>动作</th><th>目标</th><th>载荷</th><th>原因</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${approvals}">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.requester}"></td>
+            <td th:text="${a.action_type}"></td>
+            <td th:text="${a.target_name}"></td>
+            <td class="mono" th:text="${a.payload}"></td>
+            <td th:text="${a.reason}"></td>
+            <td th:text="${a.status}"></td>
+            <td th:if="${a.status == 'pending'}">
+              <form th:action="@{|/security/approvals/${a.id}/approve|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit">批准</button>
+              </form>
+              <form th:action="@{|/security/approvals/${a.id}/reject|}" method="post" class="inline-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="danger">拒绝</button>
+              </form>
+            </td>
+            <td th:unless="${a.status == 'pending'}" th:text="${a.result}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
