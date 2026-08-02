@@ -7,53 +7,6 @@ NeoForge 1.21.1 安全套件：OP 密码鉴权、指令门禁、全行为审计�
 
 > **中文** · [English](#english) · [分发策略（推荐）](#分发策略推荐)
 
----
-
-## 分发策略（推荐）
-
-### 结论：只发「一个模组 JAR」
-
-| 制品 | 给谁 | 怎么发 |
-|------|------|--------|
-| `esplus-<version>.jar` | 服主 / 运维 | **GitHub Releases**（主渠道） |
-| 面板 Spring fat-jar | — | **不要单独分发**（已嵌入模组） |
-| 源码 | 开发者 | Git 仓库 |
-| Maven 本地/私服 | CI / 二次开发 | 可选，非玩家渠道 |
-
-**推荐发布物形态：单文件、服务端-only、自包含。**
-
-构建会把这些打进同一个模组 JAR：
-
-1. 模组代码 + 嵌入的 `sqlite-jdbc`
-2. `META-INF/esplus/esplus-panel.jar`（独立 JVM 跑面板）
-3. 可选：`esplus-pwprompt-win64.zip`（Windows Qt 密码窗）
-
-服主只需：
-
-```text
-把 esplus-x.y.z.jar 丢进服务器 mods/ → 启动
-```
-
-### 为什么选这套（相对其它方案）
-
-| 方案 | 评价 |
-|------|------|
-| **单 JAR 嵌入面板（推荐）** | 安装零依赖、版本绑定清晰、不会出现「模组与面板版本对不上」 |
-| 模组 + 单独 panel.jar 双包 | 易漏装、易混版本；仅适合你自己拆开调试 |
-| 面板做成独立 systemd 服务 | 运维重、与游戏生命周期脱节；不符合「丢进 mods」定位 |
-| CurseForge / Modrinth 为主渠道 | 可以挂镜像，但安全类模组务必在 Release 说明里强调改密与绑定；默认口令策略见下 |
-| 把面板绑 `0.0.0.0` 直出公网 | **不推荐**；应用 SSH 反向隧道 / HTTPS 反代（见 `deploy/public-ingress/`） |
-
-### 发布检查清单
-
-1. `.\gradlew.bat build`（会自动 `-p panel bootJar` 并嵌入）
-2. 取 `build/libs/esplus-<version>.jar`（不要发 `*-sources` / plain panel）
-3. GitHub Release：附 jar + 简短变更说明 + 最低 NeoForge 版本
-4. Release 正文强调：
-   - **必须改** `panelPassword`（默认值会拒绝启动面板）
-   - 面板默认只听 `127.0.0.1:8088`
-   - 玩家客户端也需安装（密码弹窗 / 网络包依赖）
-5. 可选：同步上传到 Modrinth/CurseForge，指向同一 jar 与同一说明
 
 ### 版本号
 
