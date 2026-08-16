@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,13 +35,30 @@ public class PanelSecurityConfig {
             PanelMfaFilter mfaFilter
     ) throws Exception {
         http.authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/css/**", "/login", "/login/mfa").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/assets/**", "/login", "/login/mfa",
+                                "/api/auth/login", "/api/auth/mfa", "/index.html", "/").permitAll()
                         .requestMatchers("/api/ops/**").permitAll()
+                        .requestMatchers("/api/auth/**").authenticated()
+                        // SPA shell routes — any authenticated user can load the page;
+                        // fine-grained authorization is enforced at the API layer.
+                        .requestMatchers(HttpMethod.GET,
+                                "/players", "/players/**", "/bans", "/whitelist",
+                                "/messages", "/messages/**", "/world/**", "/gamerules",
+                                "/entities", "/entities/**", "/items", "/items/**",
+                                "/search", "/admins", "/admins/**",
+                                "/security/**", "/center", "/access/**",
+                                "/scoreboard", "/scoreboard/**",
+                                "/console", "/remote", "/system/**",
+                                "/automation", "/automation/**",
+                                "/diag/**", "/trace/**", "/incident/**",
+                                "/status", "/status/**").authenticated()
                         .requestMatchers("/setup/**").hasRole("ADMIN")
                         .requestMatchers("/console/**", "/api/console").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/maintenance/**", "/api/broadcast").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/automation/**").hasAnyRole("ADMIN", "MODERATOR")
+                .requestMatchers(HttpMethod.GET, "/api/automation/**").hasAnyRole("ADMIN", "MODERATOR", "VIEWER")
                         .requestMatchers(HttpMethod.POST, "/api/players/**").hasAnyRole("ADMIN", "MODERATOR")
-                        .requestMatchers("/admins/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admins/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/players/**", "/messages/**", "/whitelist/**", "/bans/**")
                         .hasAnyRole("ADMIN", "MODERATOR")
                         .requestMatchers(HttpMethod.POST, "/access/ops/**").hasRole("ADMIN")
@@ -60,9 +79,14 @@ public class PanelSecurityConfig {
                         .failureHandler(failureHandler)
                         .permitAll())
                 .logout(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/ops/**", "/api/auth/**", "/api/**"))
                 .addFilterAfter(mfaFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
@@ -83,10 +107,11 @@ public class PanelSecurityConfig {
     AuthenticationFailureHandler failureHandler(LoginAttemptService attempts) {
         return (request, response, exception) -> {
             String username = request.getParameter("username");
+            String ip = request.getRemoteAddr();
             if (!(exception instanceof DisabledException)) {
-                attempts.onFailure(username);
+                attempts.onFailure(username, ip);
             }
-            if (attempts.isLocked(username) || exception instanceof DisabledException) {
+            if (attempts.isLocked(username, ip) || exception instanceof DisabledException) {
                 response.sendRedirect("/login?error=locked");
             } else {
                 response.sendRedirect("/login?error");

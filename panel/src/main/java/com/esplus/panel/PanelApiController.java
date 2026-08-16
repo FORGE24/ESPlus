@@ -3,9 +3,11 @@ package com.esplus.panel;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,6 +58,19 @@ public class PanelApiController {
             @RequestParam(required = false) Boolean success
     ) {
         return queries.auditLogs(action, uuid, success, 200);
+    }
+
+    @GetMapping("/audit/export")
+    public ResponseEntity<String> auditExport(
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String uuid,
+            @RequestParam(required = false) Boolean success
+    ) {
+        String csv = queries.exportAuditCsv(action, uuid, success, 5000);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=audit-export.csv")
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .body(csv);
     }
 
     @GetMapping("/users")
@@ -172,5 +187,158 @@ public class PanelApiController {
     @PostMapping("/maintenance/clear")
     public Map<String, Object> maintenanceClear(@RequestParam(defaultValue = "false") boolean whitelist) {
         return Map.of("ok", queries.enqueuePayload("clear_maintenance", whitelist ? "whitelist" : null, null, null));
+    }
+
+    // ── Automation API ─────────────────────────────────────────
+
+    @GetMapping("/automation/tasks")
+    public List<Map<String, Object>> automationTasks() {
+        return queries.listAutomationTasks();
+    }
+
+    @GetMapping("/automation/tasks/{id}")
+    public Map<String, Object> automationTask(@PathVariable long id) {
+        return queries.getAutomationTask(id);
+    }
+
+    @PostMapping("/automation/tasks")
+    public Map<String, Object> createAutomationTask(
+            @RequestParam String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(defaultValue = "manual") String triggerType,
+            @RequestParam(defaultValue = "0") int intervalSecs,
+            @RequestParam(required = false) String cron) {
+        long id = queries.createAutomationTask(name, description, triggerType, intervalSecs, cron);
+        return Map.of("ok", id > 0, "id", id);
+    }
+
+    @PostMapping("/automation/tasks/{id}")
+    public Map<String, Object> updateAutomationTask(
+            @PathVariable long id,
+            @RequestParam String name,
+            @RequestParam(required = false) String description,
+            @RequestParam(defaultValue = "manual") String triggerType,
+            @RequestParam(defaultValue = "0") int intervalSecs,
+            @RequestParam(required = false) String cron,
+            @RequestParam(defaultValue = "true") boolean enabled) {
+        return Map.of("ok", queries.updateAutomationTask(id, name, description, triggerType, intervalSecs, cron, enabled));
+    }
+
+    @PostMapping("/automation/tasks/{id}/delete")
+    public Map<String, Object> deleteAutomationTask(@PathVariable long id) {
+        return Map.of("ok", queries.deleteAutomationTask(id));
+    }
+
+    @PostMapping("/automation/tasks/{id}/toggle")
+    public Map<String, Object> toggleAutomationTask(@PathVariable long id, @RequestParam boolean enabled) {
+        return Map.of("ok", queries.toggleAutomationTaskEnabled(id, enabled));
+    }
+
+    @PostMapping("/automation/tasks/{id}/trigger")
+    public Map<String, Object> triggerAutomationTask(@PathVariable long id) {
+        return Map.of("ok", queries.triggerAutomationTask(id));
+    }
+
+    @PostMapping("/automation/tasks/{taskId}/nodes")
+    public Map<String, Object> addAutomationNode(@PathVariable long taskId, @RequestParam(required = false) String name) {
+        long id = queries.addAutomationNode(taskId, name);
+        return Map.of("ok", id > 0, "id", id);
+    }
+
+    @PostMapping("/automation/nodes/{nodeId}/delete")
+    public Map<String, Object> deleteAutomationNode(@PathVariable long nodeId) {
+        return Map.of("ok", queries.deleteAutomationNode(nodeId));
+    }
+
+    @PostMapping("/automation/tasks/{taskId}/operations")
+    public Map<String, Object> addAutomationOperation(
+            @PathVariable long taskId,
+            @RequestParam long nodeId,
+            @RequestParam String actionType,
+            @RequestParam(required = false) String params) {
+        long id = queries.addAutomationOperation(taskId, nodeId, actionType, params);
+        return Map.of("ok", id > 0, "id", id);
+    }
+
+    @PostMapping("/automation/operations/{opId}")
+    public Map<String, Object> updateAutomationOperation(
+            @PathVariable long opId,
+            @RequestParam String actionType,
+            @RequestParam(required = false) String params,
+            @RequestParam(defaultValue = "true") boolean enabled) {
+        return Map.of("ok", queries.updateOperationParams(opId, actionType, params, enabled));
+    }
+
+    @PostMapping("/automation/nodes/{nodeId}/move")
+    public Map<String, Object> moveAutomationNode(
+            @PathVariable long nodeId,
+            @RequestParam long taskId,
+            @RequestParam(defaultValue = "1") int direction) {
+        return Map.of("ok", queries.moveAutomationNode(taskId, nodeId, direction));
+    }
+
+    @PostMapping("/automation/operations/{opId}/move")
+    public Map<String, Object> moveAutomationOperation(
+            @PathVariable long opId,
+            @RequestParam long nodeId,
+            @RequestParam(defaultValue = "1") int direction) {
+        return Map.of("ok", queries.moveAutomationOperation(nodeId, opId, direction));
+    }
+
+    @GetMapping("/automation/tasks/{taskId}/logs")
+    public List<Map<String, Object>> automationLogs(
+            @PathVariable long taskId,
+            @RequestParam(defaultValue = "20") int limit) {
+        return queries.automationLogs(taskId, limit);
+    }
+
+    @PostMapping("/automation/tasks/{id}/clone")
+    public Map<String, Object> cloneAutomationTask(@PathVariable long id) {
+        long newId = queries.cloneAutomationTask(id);
+        return Map.of("ok", newId > 0, "id", newId);
+    }
+
+    @PostMapping("/automation/tasks/import")
+    public Map<String, Object> importAutomationTask(@RequestBody Map<String, Object> json) {
+        String name = json.getOrDefault("name", "Imported").toString();
+        String desc = json.getOrDefault("description", "").toString();
+        String trigger = json.getOrDefault("trigger_type", "manual").toString();
+        int interval = json.get("trigger_interval_secs") instanceof Number n ? n.intValue() : 0;
+        String cron = json.getOrDefault("trigger_cron", "").toString();
+        long id = queries.createAutomationTask(name, desc, trigger, interval, cron);
+        @SuppressWarnings("unchecked")
+        var nodes = (List<Map<String, Object>>) json.get("nodes");
+        @SuppressWarnings("unchecked")
+        var ops = (List<Map<String, Object>>) json.get("operations");
+        if (nodes != null && id > 0) {
+            var nodeIdMap = new java.util.HashMap<Long, Long>();
+            for (var node : nodes) {
+                long oldNid = node.get("id") instanceof Number n ? n.longValue() : 0;
+                long newNid = queries.addAutomationNode(id, String.valueOf(node.getOrDefault("name", "步骤")));
+                nodeIdMap.put(oldNid, newNid);
+            }
+            if (ops != null) {
+                for (var op : ops) {
+                    long oldNid = op.get("node_id") instanceof Number n ? n.longValue() : 0;
+                    Long newNid = nodeIdMap.get(oldNid);
+                    if (newNid != null) {
+                        queries.addAutomationOperation(id, newNid,
+                                String.valueOf(op.getOrDefault("action_type", "console_cmd")),
+                                String.valueOf(op.getOrDefault("params", "")));
+                    }
+                }
+            }
+        }
+        return Map.of("ok", id > 0, "id", id);
+    }
+
+    @GetMapping("/automation/stats")
+    public Map<String, Object> automationStats() {
+        return queries.automationStats();
+    }
+
+    @PostMapping("/automation/operations/{opId}/delete")
+    public Map<String, Object> deleteAutomationOperation(@PathVariable long opId) {
+        return Map.of("ok", queries.deleteAutomationOperation(opId));
     }
 }

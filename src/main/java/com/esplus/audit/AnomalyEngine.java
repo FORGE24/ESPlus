@@ -25,11 +25,15 @@ public final class AnomalyEngine {
     private final Map<String, Deque<Long>> commandBuckets = new ConcurrentHashMap<>();
     private final Map<String, Deque<Long>> giveBuckets = new ConcurrentHashMap<>();
     private final Map<String, Deque<Long>> breakBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Long>> chatBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Long>> redstoneBuckets = new ConcurrentHashMap<>();
     private final Map<String, Long> alertCooldownUntil = new ConcurrentHashMap<>();
 
     private final int commandBurstThreshold;
     private final int giveBurstThreshold;
     private final int breakBurstThreshold;
+    private final int chatBurstThreshold;
+    private final int redstoneBurstThreshold;
     private final long windowMs;
     private static final long ALERT_COOLDOWN_MS = 60_000L;
 
@@ -40,6 +44,8 @@ public final class AnomalyEngine {
             int commandBurstThreshold,
             int giveBurstThreshold,
             int breakBurstThreshold,
+            int chatBurstThreshold,
+            int redstoneBurstThreshold,
             long windowMs
     ) {
         this.alertDao = alertDao;
@@ -48,6 +54,8 @@ public final class AnomalyEngine {
         this.commandBurstThreshold = commandBurstThreshold;
         this.giveBurstThreshold = giveBurstThreshold;
         this.breakBurstThreshold = breakBurstThreshold;
+        this.chatBurstThreshold = chatBurstThreshold;
+        this.redstoneBurstThreshold = redstoneBurstThreshold;
         this.windowMs = windowMs;
     }
 
@@ -85,6 +93,18 @@ public final class AnomalyEngine {
                 if (amount >= 100_000L) {
                     raise("HIGH", "ECONOMY_SPIKE", "经济异动",
                             event.actorName() + " 金额约 " + amount + " — " + event.detail(), event);
+                }
+            }
+            if ("chat".equals(event.category()) && "chat".equals(event.action())) {
+                if (burst(chatBuckets, key(event), event.ts(), chatBurstThreshold)) {
+                    raise("MEDIUM", "CHAT_SPAM", "聊天刷屏",
+                            event.actorName() + " 短时间频繁聊天", event);
+                }
+            }
+            if ("redstone".equals(event.category())) {
+                if (burst(redstoneBuckets, key(event), event.ts(), redstoneBurstThreshold)) {
+                    raise("MEDIUM", "REDSTONE_BURST", "高频红石脉冲",
+                            event.actorName() + " 高频红石脉冲（疑似卡服）", event);
                 }
             }
         } catch (Exception ex) {

@@ -13,6 +13,10 @@ import com.mojang.logging.LogUtils;
 import com.esplus.audit.AuditService;
 import com.esplus.audit.GlobalEvent;
 import com.esplus.Config;
+import com.esplus.security.connect.ConnectionFingerprintManager;
+import com.esplus.security.connect.GeoIpResolver;
+import com.esplus.security.connect.HwidDao;
+import com.esplus.security.connect.UdpProbeListener;
 import com.esplus.security.crypto.AesCipherService;
 import com.esplus.security.crypto.BcryptPasswordService;
 import com.esplus.security.crypto.RsaKeyManager;
@@ -88,6 +92,7 @@ public final class SecurityService {
     private Path databasePath;
     private volatile boolean ready;
     private volatile String failureReason;
+    private ConnectionFingerprintManager fingerprintManager;
 
     public void start(MinecraftServer server) {
         failureReason = null;
@@ -133,12 +138,23 @@ public final class SecurityService {
                 auditService = new AuditService(
                         database,
                         rsa,
+                        this,
                         Config.ANOMALY_COMMAND_BURST.getAsInt(),
                         Config.ANOMALY_GIVE_BURST.getAsInt(),
                         Config.ANOMALY_BREAK_BURST.getAsInt(),
+                        Config.ANOMALY_CHAT_BURST.getAsInt(),
+                        Config.ANOMALY_REDSTONE_BURST.getAsInt(),
                         Config.ANOMALY_WINDOW_SECONDS.getAsInt() * 1000L
                 );
             }
+
+            GeoIpResolver geoResolver = new GeoIpResolver();
+            HwidDao hwidDao = new HwidDao(database);
+            UdpProbeListener udpProbe = Config.UDP_PROBE_ENABLED.getAsBoolean()
+                    ? new UdpProbeListener()
+                    : null;
+            fingerprintManager = new ConnectionFingerprintManager(database, geoResolver, hwidDao, udpProbe);
+
             ready = true;
             failureReason = null;
             permissions.reconcilePlainOpRoles();
@@ -154,6 +170,13 @@ public final class SecurityService {
     public void stop() {
         sessions.clear();
         ready = false;
+        if (fingerprintManager != null && fingerprintManager.udpProbe() != null) {
+            try {
+                fingerprintManager.udpProbe().close();
+            } catch (Exception ignored) {
+            }
+        }
+        fingerprintManager = null;
         logCapture.detach();
         if (auditService != null) {
             auditService.close();
@@ -205,6 +228,10 @@ public final class SecurityService {
 
     public AuditService auditService() {
         return auditService;
+    }
+
+    public ConnectionFingerprintManager getFingerprintManager() {
+        return fingerprintManager;
     }
 
     public Path databasePath() {

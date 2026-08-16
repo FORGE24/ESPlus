@@ -535,6 +535,41 @@ public final class SqliteDatabase implements AutoCloseable {
                 )
                 """);
         statement.execute("""
+                CREATE TABLE IF NOT EXISTS hwid_blacklist (
+                    hwid TEXT PRIMARY KEY,
+                    name TEXT,
+                    reason TEXT,
+                    created_at INTEGER NOT NULL
+                )
+                """);
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS connection_fingerprints (
+                    player_uuid TEXT PRIMARY KEY,
+                    hwid TEXT,
+                    zone_id TEXT,
+                    client_ip TEXT,
+                    geo_country TEXT,
+                    geo_region TEXT,
+                    geo_city TEXT,
+                    geo_lat REAL,
+                    geo_lon REAL,
+                    udp_external_ip TEXT,
+                    server_latency_ms INTEGER,
+                    confidence_score INTEGER,
+                    flagged_reasons TEXT,
+                    created_at INTEGER NOT NULL
+                )
+                """);
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS geoip_blocks (
+                    country TEXT PRIMARY KEY,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    reason TEXT
+                )
+                """);
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_connection_fingerprints_hwid ON connection_fingerprints(hwid)");
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_geoip_blocks_country ON geoip_blocks(country)");
+        statement.execute("""
                 CREATE TABLE IF NOT EXISTS audit_block_signatures (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ts INTEGER NOT NULL,
@@ -547,6 +582,42 @@ public final class SqliteDatabase implements AutoCloseable {
         ensureColumn(statement, "server_runtime", "lockdown", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn(statement, "server_runtime", "setup_complete", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn(statement, "alerts", "auto_action", "TEXT");
+
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS block_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ts INTEGER NOT NULL,
+                    player_uuid TEXT NOT NULL,
+                    player_name TEXT,
+                    action TEXT NOT NULL,
+                    dimension TEXT NOT NULL,
+                    x INTEGER NOT NULL,
+                    y INTEGER NOT NULL,
+                    z INTEGER NOT NULL,
+                    block_id TEXT NOT NULL,
+                    old_block_id TEXT
+                )
+                """);
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_block_snapshots_player ON block_snapshots(player_uuid, ts)");
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_block_snapshots_pos ON block_snapshots(dimension, x, y, z)");
+
+        statement.execute("""
+                CREATE TABLE IF NOT EXISTS inventory_snapshots (
+                    snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    player_uuid TEXT NOT NULL,
+                    player_name TEXT,
+                    ts INTEGER NOT NULL,
+                    section TEXT NOT NULL,
+                    slot INTEGER NOT NULL,
+                    item_id TEXT NOT NULL,
+                    count INTEGER NOT NULL DEFAULT 1,
+                    display_name TEXT,
+                    source TEXT
+                )
+                """);
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_inv_snap_player ON inventory_snapshots(player_uuid, ts)");
+        statement.execute("CREATE INDEX IF NOT EXISTS idx_inv_snap_source ON inventory_snapshots(source)");
+
         // Existing installs: skip wizard if already used
         statement.execute("""
                 UPDATE server_runtime SET setup_complete = 1

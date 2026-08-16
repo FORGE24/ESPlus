@@ -119,6 +119,46 @@ public final class Config {
             .comment("Shown on panel remote page: SSH host hint for operators")
             .define("panelSshHint", "ssh user@public-vps");
 
+    public static final ModConfigSpec.BooleanValue GEOIP_BLOCK_ENABLED = BUILDER
+            .comment("Block connections from specific countries via geoip_blocks table")
+            .define("geoipBlockEnabled", false);
+
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> GEOIP_BLOCK_COUNTRIES = BUILDER
+            .comment("ISO country codes (2-letter) to block when geoipBlockEnabled=true")
+            .defineListAllowEmpty(
+                    "geoipBlockCountries",
+                    List.of(),
+                    () -> "",
+                    obj -> obj instanceof String);
+
+    public static final ModConfigSpec.BooleanValue HWID_BLACKLIST_ENABLED = BUILDER
+            .comment("Check connecting player HWID against hwid_blacklist table")
+            .define("hwidBlacklistEnabled", true);
+
+    public static final ModConfigSpec.IntValue CONFIDENCE_THRESHOLD = BUILDER
+            .comment("Auto-kick fingerprint sessions whose confidenceScore drops below this")
+            .defineInRange("confidenceThreshold", 30, 0, 100);
+
+    public static final ModConfigSpec.DoubleValue SERVER_GEO_LAT = BUILDER
+            .comment("Approximate server geo latitude (degrees) for RTT paradox check")
+            .defineInRange("serverGeoLat", 0.0, -90.0, 90.0);
+
+    public static final ModConfigSpec.DoubleValue SERVER_GEO_LON = BUILDER
+            .comment("Approximate server geo longitude (degrees) for RTT paradox check")
+            .defineInRange("serverGeoLon", 0.0, -180.0, 180.0);
+
+    public static final ModConfigSpec.BooleanValue UDP_PROBE_ENABLED = BUILDER
+            .comment("Enable UDP egress-IP probe to detect proxy double-NAT")
+            .define("udpProbeEnabled", true);
+
+    public static final ModConfigSpec.BooleanValue ZONE_IP_CHECK_ENABLED = BUILDER
+            .comment("Cross-check client ZoneId against GeoIP country (Asia zone + US/EU IP mismatch)")
+            .define("zoneIpCheckEnabled", true);
+
+    public static final ModConfigSpec.BooleanValue RTT_PARADOX_ENABLED = BUILDER
+            .comment("Detect latency too low to be physically possible given great-circle distance")
+            .define("rttParadoxEnabled", true);
+
     public static final ModConfigSpec.ConfigValue<String> SERVER_ID = BUILDER
             .comment("Logical server id for multi-server center (single-server default)")
             .define("serverId", "local");
@@ -210,6 +250,22 @@ public final class Config {
     public static final ModConfigSpec.IntValue PERF_HISTORY_HOURS = BUILDER
             .comment("How many hours of perf_samples to retain for trend charts")
             .defineInRange("perfHistoryHours", 168, 1, 720);
+
+    public static final ModConfigSpec.IntValue ANOMALY_CHAT_BURST = BUILDER
+            .comment("Chat count in window that triggers CHAT_SPAM alert")
+            .defineInRange("anomalyChatBurst", 10, 3, 200);
+
+    public static final ModConfigSpec.IntValue ANOMALY_REDSTONE_BURST = BUILDER
+            .comment("Redstone state-change count in window that triggers REDSTONE_BURST alert")
+            .defineInRange("anomalyRedstoneBurst", 200, 20, 2000);
+
+    public static final ModConfigSpec.BooleanValue ROLLBACK_ENABLED = BUILDER
+            .comment("Enable block rollback (block_snapshots recording + panel rollback_blocks action)")
+            .define("rollbackEnabled", true);
+
+    public static final ModConfigSpec.BooleanValue INVENTORY_SNAPSHOT_ENABLED = BUILDER
+            .comment("Enable versioned inventory snapshots for panel restore_inventory")
+            .define("inventorySnapshotEnabled", true);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 

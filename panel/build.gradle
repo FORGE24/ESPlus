@@ -35,6 +35,61 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+// ── React frontend build integration ──────────────────────────
+// Automatically runs npm install + npm run build before Spring Boot packaging.
+// Vite outputs to src/main/resources/static/ (see web/vite.config.ts).
+def webDir = layout.projectDirectory.dir('web')
+def staticDir = layout.projectDirectory.dir('src/main/resources/static')
+def isWindows = System.getProperty('os.name').toLowerCase().contains('windows')
+
+tasks.register('npmInstall', Exec) {
+    group = 'build'
+    description = 'Installs React frontend dependencies'
+    workingDir = webDir
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'npm', 'install', '--no-audit', '--no-fund'
+    } else {
+        commandLine 'npm', 'install', '--no-audit', '--no-fund'
+    }
+    inputs.file(webDir.file('package.json'))
+    inputs.file(webDir.file('package-lock.json'))
+    outputs.dir(webDir.dir('node_modules'))
+    // Skip if node_modules already exists and package files unchanged
+    onlyIf {
+        !webDir.dir('node_modules').asFile.exists() ||
+        !webDir.dir('node_modules/.package-lock.json').asFile.exists()
+    }
+}
+
+tasks.register('npmBuild', Exec) {
+    group = 'build'
+    description = 'Builds the React SPA (tsc + vite build) into Spring Boot static resources'
+    dependsOn 'npmInstall'
+    workingDir = webDir
+    if (isWindows) {
+        commandLine 'cmd', '/c', 'npm', 'run', 'build'
+    } else {
+        commandLine 'npm', 'run', 'build'
+    }
+    inputs.dir(webDir.dir('src'))
+    inputs.file(webDir.file('package.json'))
+    inputs.file(webDir.file('vite.config.ts'))
+    inputs.file(webDir.file('tsconfig.json'))
+    inputs.file(webDir.file('tsconfig.node.json'))
+    inputs.file(webDir.file('tailwind.config.ts'))
+    inputs.file(webDir.file('postcss.config.js'))
+    inputs.file(webDir.file('index.html'))
+    outputs.dir(staticDir)
+    // Allow skipping with -PskipFrontend
+    onlyIf { !project.hasProperty('skipFrontend') }
+}
+
+// Ensure frontend is built before Spring Boot processes resources / creates fat JAR
+tasks.named('processResources') {
+    dependsOn 'npmBuild'
+}
+
 bootJar {
     archiveBaseName = 'esplus-panel'
+    dependsOn 'npmBuild'
 }

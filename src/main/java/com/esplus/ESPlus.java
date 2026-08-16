@@ -3,14 +3,20 @@ package com.esplus;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.esplus.Config;
 import com.esplus.audit.BehaviorHooks;
 import com.esplus.audit.MovementTracker;
+import com.esplus.audit.snapshot.BlockRollbackExecutor;
+import com.esplus.audit.snapshot.BlockSnapshotTracker;
+import com.esplus.audit.snapshot.InventorySnapshotTracker;
+import com.esplus.audit.snapshot.RedstoneChangeTracker;
 import com.esplus.command.ESPlusCommands;
 import com.esplus.command.SudoCommands;
 import com.esplus.panel.IsolatedSpringPanel;
 import com.esplus.panel.PanelActionProcessor;
 import com.esplus.panel.ServerSnapshotSync;
 import com.esplus.security.SecurityService;
+import com.esplus.security.connect.ConnectionFingerprintTrigger;
 import com.esplus.security.gate.CommandGate;
 import com.esplus.ui.PasswordPromptBridge;
 
@@ -42,6 +48,7 @@ public class ESPlus {
         NeoForge.EVENT_BUS.register(new CommandGate(securityService));
         NeoForge.EVENT_BUS.register(new BehaviorHooks(securityService));
         NeoForge.EVENT_BUS.register(new MovementTracker(securityService));
+        NeoForge.EVENT_BUS.register(new ConnectionFingerprintTrigger(securityService));
         NeoForge.EVENT_BUS.register(new PanelActionProcessor(securityService));
         NeoForge.EVENT_BUS.register(new ServerSnapshotSync(securityService));
     }
@@ -63,6 +70,24 @@ public class ESPlus {
         }
         if (securityService.databasePath() != null) {
             springPanel.start(securityService.databasePath(), event.getServer().getServerDirectory());
+        }
+        if (Config.ROLLBACK_ENABLED.getAsBoolean() && securityService.auditService() != null) {
+            BlockSnapshotTracker bst = securityService.auditService().blockSnapshotTracker();
+            if (bst != null) {
+                NeoForge.EVENT_BUS.register(bst);
+            }
+        }
+        if (Config.INVENTORY_SNAPSHOT_ENABLED.getAsBoolean() && securityService.auditService() != null) {
+            InventorySnapshotTracker ist = securityService.auditService().inventorySnapshotTracker();
+            if (ist != null) {
+                NeoForge.EVENT_BUS.register(ist);
+            }
+        }
+        if (securityService.auditService() != null) {
+            RedstoneChangeTracker rct = securityService.auditService().redstoneChangeTracker();
+            if (rct != null) {
+                NeoForge.EVENT_BUS.register(rct);
+            }
         }
         LOGGER.info("""
 

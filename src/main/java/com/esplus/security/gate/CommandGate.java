@@ -1,5 +1,7 @@
 package com.esplus.security.gate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import com.mojang.brigadier.ParseResults;
@@ -120,19 +122,46 @@ public final class CommandGate {
 
     private static String rootCommand(ParseResults<CommandSourceStack> parse) {
         CommandContextBuilder<CommandSourceStack> context = parse.getContext();
-        CommandNode<CommandSourceStack> node = context.getRootNode();
-        for (CommandNode<CommandSourceStack> child : context.getNodes().stream().map(n -> n.getNode()).toList()) {
-            if (child.getName() != null && !child.getName().isBlank() && child != node) {
-                return child.getName().toLowerCase(Locale.ROOT);
+        var nodes = context.getNodes();
+        List<String> names = new ArrayList<>();
+        for (var pair : nodes) {
+            String n = pair.getNode().getName();
+            if (n != null && !n.isBlank()) {
+                names.add(n);
             }
         }
 
-        String input = parse.getReader().getString().trim();
-        if (input.startsWith("/")) {
-            input = input.substring(1);
+        String root = null;
+        if (!names.isEmpty()) {
+            root = names.getFirst();
+            // Recursively resolve /execute ... run <actual_command>
+            if ("execute".equals(root) || "minecraft:execute".equals(root)) {
+                // Find the last "run" keyword, then take the following literal as the real command
+                int lastRun = -1;
+                for (int i = 0; i < names.size(); i++) {
+                    String n = names.get(i);
+                    if ("run".equals(n) || "minecraft:run".equals(n)) {
+                        lastRun = i;
+                    }
+                }
+                if (lastRun >= 0 && lastRun + 1 < names.size()) {
+                    root = names.get(lastRun + 1);
+                } else {
+                    // /execute without run (shouldn't happen for executable commands)
+                    root = "execute";
+                }
+            }
         }
-        int space = input.indexOf(' ');
-        String root = space < 0 ? input : input.substring(0, space);
-        return root.isBlank() ? null : root.toLowerCase(Locale.ROOT);
+
+        if (root == null) {
+            String input = parse.getReader().getString().trim();
+            if (input.startsWith("/")) input = input.substring(1);
+            int space = input.indexOf(' ');
+            root = space < 0 ? input : input.substring(0, space);
+        }
+        if (root == null || root.isBlank()) return null;
+        // Normalize namespace aliases
+        if (root.startsWith("minecraft:")) root = root.substring("minecraft:".length());
+        return root.toLowerCase(Locale.ROOT);
     }
 }

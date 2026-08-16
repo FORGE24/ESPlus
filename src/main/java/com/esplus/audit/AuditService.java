@@ -9,6 +9,11 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esplus.audit.snapshot.BlockRollbackExecutor;
+import com.esplus.audit.snapshot.BlockSnapshotTracker;
+import com.esplus.audit.snapshot.InventorySnapshotTracker;
+import com.esplus.audit.snapshot.RedstoneChangeTracker;
+import com.esplus.security.SecurityService;
 import com.esplus.security.crypto.RsaKeyManager;
 import com.esplus.security.db.SqliteDatabase;
 
@@ -26,6 +31,10 @@ public final class AuditService implements AutoCloseable {
     private final AdminRiskScorer adminRiskScorer;
     private final AutoResponseEngine autoResponseEngine;
     private final AuditBlockSigner blockSigner;
+    private final BlockSnapshotTracker blockSnapshotTracker;
+    private final BlockRollbackExecutor blockRollbackExecutor;
+    private final InventorySnapshotTracker inventorySnapshotTracker;
+    private final RedstoneChangeTracker redstoneChangeTracker;
     private final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "esplus-audit-writer");
         t.setDaemon(true);
@@ -37,9 +46,12 @@ public final class AuditService implements AutoCloseable {
     public AuditService(
             SqliteDatabase database,
             RsaKeyManager rsa,
+            SecurityService security,
             int commandBurstThreshold,
             int giveBurstThreshold,
             int breakBurstThreshold,
+            int chatBurstThreshold,
+            int redstoneBurstThreshold,
             long anomalyWindowMs
     ) {
         this.database = database;
@@ -52,9 +64,14 @@ public final class AuditService implements AutoCloseable {
         this.blockSigner = new AuditBlockSigner(database, rsa);
         this.anomalyEngine = new AnomalyEngine(
                 alertDao, webhookDispatcher, autoResponseEngine,
-                commandBurstThreshold, giveBurstThreshold, breakBurstThreshold, anomalyWindowMs);
+                commandBurstThreshold, giveBurstThreshold, breakBurstThreshold,
+                chatBurstThreshold, redstoneBurstThreshold, anomalyWindowMs);
         this.adminRiskScorer = new AdminRiskScorer(database, alertDao, webhookDispatcher);
         this.incidentChainService = new IncidentChainService(eventDao, movementDao, itemTraceDao);
+        this.blockSnapshotTracker = new BlockSnapshotTracker(database);
+        this.blockRollbackExecutor = new BlockRollbackExecutor(database);
+        this.inventorySnapshotTracker = new InventorySnapshotTracker(database);
+        this.redstoneChangeTracker = new RedstoneChangeTracker(security);
         this.ready = true;
     }
 
@@ -228,6 +245,22 @@ public final class AuditService implements AutoCloseable {
         } catch (Exception ex) {
             return new DashboardStats(0L, 0L);
         }
+    }
+
+    public BlockSnapshotTracker blockSnapshotTracker() {
+        return blockSnapshotTracker;
+    }
+
+    public BlockRollbackExecutor blockRollbackExecutor() {
+        return blockRollbackExecutor;
+    }
+
+    public InventorySnapshotTracker inventorySnapshotTracker() {
+        return inventorySnapshotTracker;
+    }
+
+    public RedstoneChangeTracker redstoneChangeTracker() {
+        return redstoneChangeTracker;
     }
 
     @Override

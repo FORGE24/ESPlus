@@ -35,6 +35,16 @@ public final class ModNetworking {
                 PasswordPromptResultPayload.STREAM_CODEC,
                 ServerPasswordHandlers::handleResult
         );
+        registrar.playToClient(
+                ConnectionFingerprintPayload.TYPE,
+                ConnectionFingerprintPayload.STREAM_CODEC,
+                (payload, context) -> {}
+        );
+        registrar.playToServer(
+                ConnectionFingerprintPayload.TYPE,
+                ConnectionFingerprintPayload.STREAM_CODEC,
+                com.esplus.security.connect.ServerConnectionFingerprintHandlers::handle
+        );
     }
 
     private static void dispatchClientOpen(OpenPasswordPromptPayload payload, IPayloadContext context) {

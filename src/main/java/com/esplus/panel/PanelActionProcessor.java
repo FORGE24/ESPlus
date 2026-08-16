@@ -51,10 +51,16 @@ public final class PanelActionProcessor {
     private static final int INTERVAL_TICKS = 20;
 
     private final SecurityService security;
+    private final AutomationService automation;
     private int tickCounter;
 
     public PanelActionProcessor(SecurityService security) {
         this.security = security;
+        this.automation = new AutomationService(security);
+    }
+
+    public AutomationService automation() {
+        return automation;
     }
 
     @SubscribeEvent
@@ -68,11 +74,15 @@ public final class PanelActionProcessor {
         }
         tickCounter = 0;
         security.logCapture().flush();
-        process(event.getServer());
-        processSchedules(event.getServer());
+        MinecraftServer server = event.getServer();
+        if (automation != null) automation.tick();
+        if (automation != null) automation.setServer(server);
+        process(server);
+        processSchedules(server);
     }
 
     private void process(MinecraftServer server) {
+        if (automation != null) automation.ensureTables();
         PanelActionDao dao = security.panelActionDao();
         if (dao == null) {
             return;
@@ -141,6 +151,9 @@ public final class PanelActionProcessor {
                         case "restore_snapshot" -> applyRestoreSnapshot(server, dao, action);
                         case "lockdown_on" -> applyLockdown(server, dao, action, true);
                         case "lockdown_off" -> applyLockdown(server, dao, action, false);
+                        case "automation_trigger" -> applyAutomationTrigger(dao, action);
+                        case "rollback_blocks" -> applyRollbackBlocks(server, dao, action);
+                        case "restore_inventory" -> applyRestoreInventory(server, dao, action);
                         default -> dao.markDone(action.id(), false, "unknown_action");
                     }
                 } catch (Exception ex) {
@@ -1208,6 +1221,157 @@ public final class PanelActionProcessor {
             dao.markDone(action.id(), true, "lockdown_off");
             security.audit(null, "panel_lockdown_off", "ok", true);
         }
+    }
+
+    private void applyAutomationTrigger(PanelActionDao dao, PanelAction action) throws Exception {
+        if (automation == null) {
+            dao.markDone(action.id(), false, "no_automation_service");
+            return;
+        }
+        String raw = action.payload() == null ? "" : action.payload().trim();
+        long taskId;
+        try {
+            taskId = Long.parseLong(raw);
+        } catch (NumberFormatException ex) {
+            dao.markDone(action.id(), false, "bad_task_id");
+            return;
+        }
+        boolean ok = automation.executeTask(taskId);
+        dao.markDone(action.id(), ok, ok ? "automation_triggered" : "execution_failed");
+        security.audit(null, "panel_automation_trigger", "task=" + taskId + " ok=" + ok, ok);
+    }
+
+    private void applyRollbackBlocks(MinecraftServer server, PanelActionDao dao, PanelAction action) throws Exception {
+        if (!Config.ROLLBACK_ENABLED.getAsBoolean()) {
+            dao.markDone(action.id(), false, "rollback_disabled");
+            return;
+        }
+        var audit = security.auditService();
+        if (audit == null) {
+            dao.markDone(action.id(), false, "no_audit_service");
+            return;
+        }
+        JsonPayload payload = parseJson(action.payload());
+        UUID uuid = payload.uuid();
+        if (uuid == null) {
+            dao.markDone(action.id(), false, "missing_player_uuid");
+            return;
+        }
+        long fromTs = payload.fromTs();
+        long toTs = payload.toTs();
+        if (fromTs <= 0 || toTs <= 0 || fromTs > toTs) {
+            dao.markDone(action.id(), false, "bad_time_range");
+            return;
+        }
+        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+        ServerLevel level = null;
+        String dimId = payload.dimension();
+        if (dimId != null && !dimId.isBlank()) {
+            for (ServerLevel candidate : server.getAllLevels()) {
+                if (candidate.dimension().location().toString().equals(dimId)) {
+                    level = candidate;
+                    break;
+                }
+            }
+        }
+        if (level == null) {
+            if (player != null) {
+                level = (ServerLevel) player.level();
+            } else {
+                level = server.overworld();
+            }
+        }
+        var result = audit.blockRollbackExecutor().rollbackPlayerBlocks(uuid, fromTs, toTs, level);
+        String msg = "rollback_blocks ok=" + result.successCount() + " fail=" + result.failCount() + " total=" + result.totalFound();
+        dao.markDone(action.id(), true, msg);
+        security.audit(uuid, "panel_rollback_blocks", msg, true);
+    }
+
+    private void applyRestoreInventory(MinecraftServer server, PanelActionDao dao, PanelAction action) throws Exception {
+        if (!Config.INVENTORY_SNAPSHOT_ENABLED.getAsBoolean()) {
+            dao.markDone(action.id(), false, "inventory_snapshot_disabled");
+            return;
+        }
+        var audit = security.auditService();
+        if (audit == null) {
+            dao.markDone(action.id(), false, "no_audit_service");
+            return;
+        }
+        JsonPayload payload = parseJson(action.payload());
+        UUID uuid = payload.uuid();
+        if (uuid == null) {
+            dao.markDone(action.id(), false, "missing_player_uuid");
+            return;
+        }
+        long targetTs = payload.targetTs();
+        if (targetTs <= 0) {
+            targetTs = System.currentTimeMillis();
+        }
+        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+        if (player == null) {
+            dao.markDone(action.id(), false, "player_offline");
+            return;
+        }
+        var result = audit.inventorySnapshotTracker().restoreInventory(uuid, targetTs, player);
+        String msg = "restore_inventory restored=" + result.restored() + " failed=" + result.failed();
+        dao.markDone(action.id(), result.restored() > 0, msg);
+        security.audit(uuid, "panel_restore_inventory", msg, result.restored() > 0);
+    }
+
+    private static JsonPayload parseJson(String raw) {
+        String s = raw == null ? "" : raw.trim();
+        UUID uuid = null;
+        long fromTs = 0;
+        long toTs = 0;
+        long targetTs = 0;
+        String dimension = null;
+        try {
+            int uq = s.indexOf("\"playerUuid\"");
+            if (uq < 0) uq = s.indexOf("\"player_uuid\"");
+            if (uq < 0) uq = s.indexOf("\"uuid\"");
+            if (uq >= 0) {
+                int colon = s.indexOf(':', uq);
+                int q1 = s.indexOf('"', colon + 1);
+                int q2 = s.indexOf('"', q1 + 1);
+                if (q1 > 0 && q2 > 0) {
+                    uuid = UUID.fromString(s.substring(q1 + 1, q2));
+                }
+            }
+            fromTs = extractLong(s, "fromTs", "from_ts");
+            toTs = extractLong(s, "toTs", "to_ts");
+            targetTs = extractLong(s, "targetTs", "target_ts");
+            int dq = s.indexOf("\"dimension\"");
+            if (dq >= 0) {
+                int colon = s.indexOf(':', dq);
+                int q1 = s.indexOf('"', colon + 1);
+                int q2 = s.indexOf('"', q1 + 1);
+                if (q1 > 0 && q2 > 0) {
+                    dimension = s.substring(q1 + 1, q2);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return new JsonPayload(uuid, fromTs, toTs, targetTs, dimension);
+    }
+
+    private static long extractLong(String s, String key1, String key2) {
+        int idx = s.indexOf('"' + key1 + '"');
+        if (idx < 0) idx = s.indexOf('"' + key2 + '"');
+        if (idx < 0) return 0;
+        int colon = s.indexOf(':', idx);
+        int end = colon + 1;
+        while (end < s.length() && Character.isWhitespace(s.charAt(end))) end++;
+        int start = end;
+        while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+        if (start == end) return 0;
+        try {
+            return Long.parseLong(s.substring(start, end));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private record JsonPayload(UUID uuid, long fromTs, long toTs, long targetTs, String dimension) {
     }
 
     private void setLockdownFlag(boolean on) {

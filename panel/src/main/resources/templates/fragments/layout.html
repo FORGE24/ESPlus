@@ -3,6 +3,8 @@
 <head th:fragment="head(pageTitle)">
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}"/>
+  <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}"/>
   <title th:text="${pageTitle}">ES+</title>
   <link rel="stylesheet" th:href="@{/css/panel.css}"/>
 </head>
@@ -128,6 +130,9 @@
       </li>
       <li sec:authorize="hasRole('ADMIN')">
         <a th:href="@{/system/schedules}" th:classappend="${active == 'schedules'} ? ' active'">任务调度</a>
+      </li>
+      <li sec:authorize="hasRole('ADMIN')">
+        <a th:href="@{/automation}" th:classappend="${active == 'automation'} ? ' active'">⚡ 自动化</a>
       </li>
       <li><a th:href="@{/system/runtime}" th:classappend="${active == 'runtime-cfg'} ? ' active'">运行时配置</a></li>
 

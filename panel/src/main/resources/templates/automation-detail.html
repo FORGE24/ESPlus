@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('自动化 - 编辑 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('automation')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>⚡ <span th:text="${name}"></span></h2>
+      <p th:if="${description}" th:text="${description}"></p>
+      <p>
+        <span th:if="${trigger_type == 'manual'}">🔘 手动触发</span>
+        <span th:if="${trigger_type == 'interval'}">⏱ 每 <span th:text="${trigger_interval_secs}"></span> 秒</span>
+        <span th:if="${trigger_type == 'cron'}">🕐 Cron: <code th:text="${trigger_cron}"></code></span>
+        &nbsp;|&nbsp;
+        <span th:if="${enabled == 1}" style="color:var(--ok)">✔ 已启用</span>
+        <span th:if="${enabled != 1}" style="color:var(--muted)">✘ 已停用</span>
+      </p>
+    </div>
+
+    <!-- ⚙ Settings -->
+    <div class="card">
+      <div class="card-title">⚙ 任务设置</div>
+      <div class="card-body">
+        <form id="settingsForm" class="mod-form" onsubmit="return saveSettings(event)">
+          <div class="form-row"><label class="field-cap">名称</label><input id="sName" th:value="${name}" required maxlength="80"/></div>
+          <div class="form-row"><label class="field-cap">描述</label><input id="sDesc" th:value="${description}" maxlength="200"/></div>
+          <div class="form-row">
+            <label class="field-cap">触发</label>
+            <select id="sTrigger" onchange="onTriggerChange()">
+              <option value="manual" th:selected="${trigger_type == 'manual'}">🔘 手动</option>
+              <option value="interval" th:selected="${trigger_type == 'interval'}">⏱ 定时循环</option>
+              <option value="cron" th:selected="${trigger_type == 'cron'}">🕐 Cron</option>
+            </select>
+          </div>
+          <div class="form-row" id="intervalRow"><label class="field-cap">间隔(秒)</label><input type="number" id="sInterval" th:value="${trigger_interval_secs}" min="0" max="31536000"/><span class="hint">0=不自动执行</span></div>
+          <div class="form-row" id="cronRow"><label class="field-cap">Cron 表达式</label><input id="sCron" th:value="${trigger_cron}" placeholder="0 */30 * * * ?" style="width:200px"/><span class="hint">秒 分 时 日 月 周 / @hourly @daily</span></div>
+          <div class="form-row"><label class="field-cap">启用</label><input type="checkbox" id="sEnabled" th:checked="${enabled == 1}"/></div>
+          <button type="submit">💾 保存设置</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 📦 Nodes -->
+    <div class="card" id="nodesSection">
+      <div class="card-title">📦 节点列表 <button onclick="addNode()" style="float:right;font-size:13px">+ 添加节点</button></div>
+      <div class="card-body" id="nodesContainer">
+        <div th:each="node : ${nodes}" class="node-block" style="border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:12px;background:#fafbff">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong th:text="${node.name}"></strong>
+            <div style="display:flex;gap:4px">
+              <button class="move-btn" th:attr="data-node-id=${node.id},data-dir=-1" title="上移">▲</button>
+              <button class="move-btn" th:attr="data-node-id=${node.id},data-dir=1" title="下移">▼</button>
+              <button class="danger delete-node-btn" th:attr="data-node-id=${node.id}" style="font-size:12px;padding:2px 8px">删除</button>
+            </div>
+          </div>
+          <!-- Operations list -->
+          <div class="op-list">
+            <div th:each="op : ${operations}" th:if="${op.node_id == node.id}" class="op-row" style="display:flex;gap:6px;align-items:center;padding:4px 0;font-size:13px">
+              <span style="min-width:24px;text-align:center;color:var(--muted)" th:text="${op.position}"></span>
+              <code th:text="${op.action_type}" style="background:#f0f4ff;padding:2px 6px;border-radius:3px;min-width:100px;text-align:center"></code>
+              <span th:if="${op.enabled == 1}" style="color:var(--ok);cursor:pointer" th:attr="data-op-id=${op.id},data-now=1" class="toggle-op-btn" title="点击停用">✓</span>
+              <span th:if="${op.enabled != 1}" style="color:var(--danger);cursor:pointer" th:attr="data-op-id=${op.id},data-now=0" class="toggle-op-btn" title="点击启用">✘</span>
+              <a href="#" class="edit-op-btn" th:attr="data-op-id=${op.id},data-action=${op.action_type},data-params=${op.params}" style="font-size:12px">编辑</a>
+              <button class="move-btn" th:attr="data-op-id=${op.id},data-dir=-1" style="font-size:9px;padding:0 4px" title="上移">▲</button>
+              <button class="move-btn" th:attr="data-op-id=${op.id},data-dir=1" style="font-size:9px;padding:0 4px" title="下移">▼</button>
+              <button class="delete-op-btn" th:attr="data-op-id=${op.id}" style="font-size:11px;padding:1px 6px;color:var(--danger)">✕</button>
+            </div>
+          </div>
+          <!-- Add new op -->
+          <div style="margin-top:6px;font-size:12px;display:flex;gap:6px;align-items:center">
+            <select th:attr="id=|opAction_${node.id}|" style="width:150px;font-size:12px">
+              <option value="console_cmd">🖥 控制台指令</option>
+              <option value="broadcast">📢 全服广播</option>
+              <option value="save_all">💾 强制存档</option>
+              <option value="restart_hint">🔄 重启提醒</option>
+              <option value="kick_player">👢 踢出玩家</option>
+              <option value="ban_player">🚫 封禁玩家</option>
+              <option value="clear_items">🧹 清理物品</option>
+              <option value="kill_monsters">🗡 清理怪物</option>
+              <option value="title_broadcast">📺 标题推送</option>
+              <option value="maintenance_kick">🔧 维护踢人</option>
+              <option value="wait_delay">⏳ 等待延迟</option>
+              <option value="conditional_if">🔀 条件判断</option>
+            </select>
+            <input th:attr="id=|opParams_${node.id}|" placeholder="参数" style="width:200px;font-size:12px"/>
+            <button class="ok-btn add-op-btn" th:attr="data-node-id=${node.id}" style="font-size:12px;padding:2px 10px">+ 添加</button>
+          </div>
+        </div>
+        <div th:if="${#lists.isEmpty(nodes)}" style="color:var(--muted);text-align:center;padding:20px">
+          还没有节点。点击上方「+ 添加节点」创建第一个步骤。
+        </div>
+      </div>
+    </div>
+
+    <!-- 📋 Execution log -->
+    <div class="card" id="logsSection">
+      <div class="card-title">📋 执行日志 <span style="font-size:12px;color:var(--muted)">（最近 20 条）</span></div>
+      <div class="card-body" id="logsContainer">
+        <table>
+          <thead><tr><th>时间</th><th>结果</th><th>错误</th></tr></thead>
+          <tbody>
+            <tr th:each="log : ${logs}">
+              <td class="mono" th:text="${log.created_at != null && log.created_at > 0} ? ${#dates.format(new java.util.Date((long)log.created_at), 'yyyy-MM-dd HH:mm:ss')} : '—'"></td>
+              <td th:if="${log.success == 1}" style="color:var(--ok)">✔ 成功</td>
+              <td th:if="${log.success != 1}" style="color:var(--danger)">✘ 失败</td>
+              <td th:text="${log.error}" style="color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(logs)}"><td colspan="3" style="color:var(--muted)">暂无执行记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Edit op modal (hidden) -->
+    <div id="editOpModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:9999">
+      <div style="background:#fff;border-radius:8px;padding:20px;width:460px;margin:15% auto">
+        <h3>编辑操作</h3>
+        <form onsubmit="return saveEditOp(event)" class="mod-form">
+          <input type="hidden" id="editOpId" />
+          <div class="form-row"><label class="field-cap">类型</label><select id="editOpAction" style="width:200px">
+            <option value="console_cmd">🖥 控制台指令</option>
+            <option value="broadcast">📢 全服广播</option>
+            <option value="save_all">💾 强制存档</option>
+            <option value="restart_hint">🔄 重启提醒</option>
+            <option value="kick_player">👢 踢出玩家</option>
+            <option value="ban_player">🚫 封禁玩家</option>
+            <option value="clear_items">🧹 清理物品</option>
+            <option value="kill_monsters">🗡 清理怪物</option>
+            <option value="title_broadcast">📺 标题推送</option>
+            <option value="maintenance_kick">🔧 维护踢人</option>
+            <option value="wait_delay">⏳ 等待延迟</option>
+            <option value="conditional_if">🔀 条件判断</option>
+          </select></div>
+          <div class="form-row"><label class="field-cap">参数</label><input id="editOpParams" placeholder="指令/消息/玩家名等" style="width:300px"/></div>
+          <div class="form-row"><label class="field-cap">启用</label><input type="checkbox" id="editOpEnabled" checked/></div>
+          <button type="submit">保存</button>
+          <button type="button" onclick="document.getElementById('editOpModal').style.display='none'" class="danger">取消</button>
+        </form>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:12px;justify-content:flex-end">
+      <button onclick="triggerNow()" class="ok-btn" style="font-size:15px;padding:8px 24px">▶ 立即执行</button>
+      <button onclick="cloneTask()" style="font-size:14px">📋 克隆此任务</button>
+      <button onclick="exportTask()" style="font-size:14px">📥 导出 JSON</button>
+      <a th:href="@{/automation}" style="color:var(--muted)">← 返回列表</a>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+function csrfHeaders(extra) {
+  var h = Object.assign({'Content-Type':'application/x-www-form-urlencoded'}, extra || {});
+  var token = document.querySelector('meta[name="_csrf"]')?.content;
+  var header = document.querySelector('meta[name="_csrf_header"]')?.content;
+  if (token && header) h[header] = token;
+  return h;
+}
+const TASK_ID = /*[[${taskId}]]*/ 0;
+
+// ── Trigger type visibility ──
+function onTriggerChange() {
+  var v = document.getElementById('sTrigger').value;
+  document.getElementById('intervalRow').style.display = v === 'interval' ? '' : 'none';
+  document.getElementById('cronRow').style.display = v === 'cron' ? '' : 'none';
+}
+onTriggerChange();
+
+// ── Save settings ──
+async function saveSettings(e) {
+  e.preventDefault();
+  var fd = new URLSearchParams();
+  fd.set('name', document.getElementById('sName').value || 'Untitled');
+  fd.set('description', document.getElementById('sDesc').value || '');
+  fd.set('triggerType', document.getElementById('sTrigger').value);
+  fd.set('intervalSecs', document.getElementById('sInterval').value || '0');
+  fd.set('cron', document.getElementById('sCron').value || '');
+  fd.set('enabled', document.getElementById('sEnabled').checked);
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID, {method:'POST', headers: csrfHeaders(), body:fd});
+  var data = await resp.json();
+  if (data.ok) location.reload();
+  else alert('保存失败');
+  return false;
+}
+
+// ── Node actions ──
+async function addNode() {
+  var name = prompt('节点名称：', '步骤');
+  if (!name) return;
+  var fd = new URLSearchParams(); fd.set('name', name);
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID + '/nodes', {method:'POST', headers: csrfHeaders(), body:fd});
+  var data = await resp.json();
+  if (data.ok) location.reload(); else alert('添加失败');
+}
+
+async function deleteNode(nodeId) {
+  if (!confirm('删除此节点及其所有操作？')) return;
+  await fetch('/api/automation/nodes/' + nodeId + '/delete', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+  location.reload();
+}
+
+// ── Op actions ──
+async function addOp(nodeId) {
+  var action = document.getElementById('opAction_' + nodeId).value;
+  var params = document.getElementById('opParams_' + nodeId).value || '';
+  if (!action) return;
+  var fd = new URLSearchParams();
+  fd.set('nodeId', nodeId); fd.set('actionType', action); fd.set('params', params);
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID + '/operations', {method:'POST', headers: csrfHeaders(), body:fd});
+  if (data.ok) location.reload(); else alert('添加失败');
+  var data = await resp.json();
+}
+
+async function deleteOp(opId) {
+  if (!confirm('删除此操作？')) return;
+  await fetch('/api/automation/operations/' + opId + '/delete', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+  location.reload();
+}
+
+async function saveEditOp(e) {
+  e.preventDefault();
+  var fd = new URLSearchParams();
+  fd.set('actionType', document.getElementById('editOpAction').value);
+  fd.set('params', document.getElementById('editOpParams').value);
+  fd.set('enabled', document.getElementById('editOpEnabled').checked);
+  var opId = document.getElementById('editOpId').value;
+  var resp = await fetch('/api/automation/operations/' + opId, {method:'POST', headers: csrfHeaders(), body:fd});
+  if ((await resp.json()).ok) location.reload();
+  else alert('保存失败');
+  return false;
+}
+
+// ── Move / toggle via delegated events ──
+document.addEventListener('click', async function(e) {
+  var btn = e.target.closest('button');
+  if (!btn) return;
+
+  // Add op
+  if (btn.classList.contains('add-op-btn')) {
+    e.preventDefault();
+    var nodeId = btn.getAttribute('data-node-id');
+    if (!nodeId) return;
+    var actionSel = document.getElementById('opAction_' + nodeId);
+    var paramsIn = document.getElementById('opParams_' + nodeId);
+    if (!actionSel) return;
+    var action = actionSel.value;
+    var params = paramsIn ? paramsIn.value : '';
+    var fd = new URLSearchParams();
+    fd.set('nodeId', nodeId); fd.set('actionType', action); fd.set('params', params || '');
+    var resp = await fetch('/api/automation/tasks/' + TASK_ID + '/operations', {method:'POST', headers: csrfHeaders(), body:fd});
+    var data = await resp.json();
+    if (data.ok) location.reload(); else alert('添加失败');
+    return;
+  }
+
+  // Move node
+  if (btn.classList.contains('move-btn') && btn.hasAttribute('data-node-id')) {
+    e.preventDefault();
+    var nid = btn.getAttribute('data-node-id');
+    var dir = btn.getAttribute('data-dir');
+    await fetch('/api/automation/nodes/' + nid + '/move', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams('taskId=' + TASK_ID + '&direction=' + dir)});
+    location.reload();
+    return;
+  }
+
+  // Move op
+  if (btn.classList.contains('move-btn') && btn.hasAttribute('data-op-id')) {
+    e.preventDefault();
+    var oid = btn.getAttribute('data-op-id');
+    var dir = btn.getAttribute('data-dir');
+    var nodeRow = btn.closest('.node-block');
+    var firstOpBtn = nodeRow ? nodeRow.querySelector('.move-btn[data-op-id]') : null;
+    var nid = firstOpBtn ? firstOpBtn.getAttribute('data-op-id') : null;
+    // Find node_id from the first op in this node
+    var nodeId = null;
+    var ops = document.querySelectorAll('.move-btn[data-op-id]');
+    for (var i=0;i<ops.length;i++) { if (ops[i] === btn) break; if (ops[i].parentElement.parentElement.parentElement === btn.parentElement.parentElement.parentElement) nodeId = ops[i].getAttribute('data-op-id'); }
+    // Simpler: get from any op-btn in same node block
+    var allAddBtns = nodeRow.querySelectorAll('.add-op-btn');
+    if (allAddBtns.length > 0) {
+      nodeId = allAddBtns[0].getAttribute('data-node-id');
+    }
+    if (nodeId) {
+      await fetch('/api/automation/operations/' + oid + '/move', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams('nodeId=' + nodeId + '&direction=' + dir)});
+      location.reload();
+    }
+    return;
+  }
+
+  // Delete node
+  if (btn.classList.contains('delete-node-btn')) {
+    e.preventDefault();
+    var nid = btn.getAttribute('data-node-id');
+    if (!confirm('删除此节点及其所有操作？')) return;
+    await fetch('/api/automation/nodes/' + nid + '/delete', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+    location.reload();
+    return;
+  }
+
+  // Delete op
+  if (btn.classList.contains('delete-op-btn')) {
+    e.preventDefault();
+    var oid = btn.getAttribute('data-op-id');
+    if (!confirm('删除此操作？')) return;
+    await fetch('/api/automation/operations/' + oid + '/delete', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+    location.reload();
+    return;
+  }
+});
+
+// Toggle op enabled
+document.addEventListener('click', async function(e) {
+  var span = e.target.closest('.toggle-op-btn');
+  if (!span) return;
+  e.preventDefault();
+  var opId = span.getAttribute('data-op-id');
+  var now = span.getAttribute('data-now') === '1';
+  var fd = new URLSearchParams();
+  fd.set('actionType', 'x'); fd.set('params', ''); fd.set('enabled', !now);
+  await fetch('/api/automation/operations/' + opId, {method:'POST', headers: csrfHeaders(), body:fd});
+  location.reload();
+});
+
+// Edit op modal
+document.addEventListener('click', async function(e) {
+  var a = e.target.closest('.edit-op-btn');
+  if (!a) return;
+  e.preventDefault();
+  document.getElementById('editOpId').value = a.getAttribute('data-op-id');
+  document.getElementById('editOpAction').value = a.getAttribute('data-action');
+  document.getElementById('editOpParams').value = a.getAttribute('data-params') || '';
+  document.getElementById('editOpEnabled').checked = true;
+  document.getElementById('editOpModal').style.display = '';
+});
+
+// ── Trigger now ──
+async function triggerNow() {
+  if (!confirm('确认立即执行此任务？')) return;
+  var fd = new URLSearchParams();
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID + '/trigger', {method:'POST', headers: csrfHeaders(), body:fd});
+  var data = await resp.json();
+  if (data.ok) alert('已加入执行队列，将在 1-2 秒内执行。执行结果会记录在日志中。');
+  else alert('触发失败');
+}
+
+// ── Clone ──
+async function cloneTask() {
+  if (!confirm('创建此任务的一个完整副本？')) return;
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID + '/clone', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+  var data = await resp.json();
+  if (data.ok) window.location.href = '/automation/' + data.id;
+  else alert('克隆失败');
+}
+
+// ── Export ──
+async function exportTask() {
+  var resp = await fetch('/api/automation/tasks/' + TASK_ID);
+  var data = await resp.json();
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'automation_' + (data.name || TASK_ID) + '.json';
+  a.click();
+}
+</script>
+</body>
+</html>

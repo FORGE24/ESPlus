@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('自动化 - ES+')}"></head>
+<body>
+<div th:replace="~{fragments/layout :: top}"></div>
+<div class="container">
+  <div th:replace="~{fragments/layout :: sidebar('automation')}"></div>
+  <main class="main-content">
+    <div class="page-heading">
+      <h2>⚡ 自动化任务</h2>
+      <p>定时或手动执行多步骤操作链：每个任务包含多个节点，每个节点可添加指令/广播/清理/条件等操作。类似蓝图编排。</p>
+      <p style="font-size:13px">
+        支持 Cron 表达式 (<code>0 */30 * * * ?</code>)、变量替换 (<code>{{time}}</code> <code>{{online}}</code> <code>{{tps}}</code>)、条件判断 (<code>online>=1</code> <code>time=06..23</code>)。
+      </p>
+    </div>
+
+    <p th:if="${msg}" class="flash-ok" th:text="${msg}"></p>
+    <p th:if="${err}" class="flash-err" th:text="${err}"></p>
+
+    <!-- Quick actions -->
+    <div class="card" sec:authorize="hasAnyRole('ADMIN','MODERATOR')">
+      <div class="card-title">新建任务</div>
+      <div class="card-body">
+        <form id="createForm" class="mod-form" onsubmit="return createTask(event)">
+          <div class="form-row">
+            <label class="field-cap">名称</label>
+            <input name="name" placeholder="例如：每日重启前清理" required maxlength="80" style="width:260px"/>
+            <label class="field-cap" style="margin-left:12px">触发</label>
+            <select name="triggerType" id="triggerType" style="width:130px">
+              <option value="manual">🔘 手动</option>
+              <option value="interval">⏱ 定时循环</option>
+              <option value="cron">🕐 Cron</option>
+            </select>
+          </div>
+          <div class="form-row" id="intervalRow" style="display:none">
+            <label class="field-cap">间隔(秒)</label>
+            <input type="number" name="intervalSecs" value="300" min="1" max="31536000"/>
+            <span class="hint">300=5分钟 / 3600=1小时 / 86400=1天</span>
+          </div>
+          <div class="form-row" id="cronRow" style="display:none">
+            <label class="field-cap">Cron</label>
+            <input name="cron" placeholder="0 */30 * * * ?" style="width:200px"/>
+            <span class="hint">也支持 @hourly @daily @weekly @monthly</span>
+          </div>
+          <button type="submit">创建</button>
+          <span style="margin-left:12px;font-size:12px">
+            <a href="#" onclick="return importTask(event)" style="text-decoration:underline">📥 导入 JSON</a>
+          </span>
+        </form>
+        <script>
+          function csrfHeaders() {
+            var token = document.querySelector('meta[name="_csrf"]')?.content;
+            var header = document.querySelector('meta[name="_csrf_header"]')?.content;
+            var h = {'Content-Type':'application/x-www-form-urlencoded'};
+            if (token && header) h[header] = token;
+            return h;
+          }
+          document.getElementById('triggerType').onchange = function() {
+            document.getElementById('intervalRow').style.display = this.value === 'interval' ? '' : 'none';
+            document.getElementById('cronRow').style.display = this.value === 'cron' ? '' : 'none';
+          };
+          async function createTask(e) {
+            e.preventDefault();
+            var fd = new URLSearchParams(new FormData(e.target));
+            var resp = await fetch('/api/automation/tasks', {method:'POST', headers: csrfHeaders(), body:fd});
+            var data = await resp.json();
+            if (data.ok) window.location.href = '/automation/' + data.id;
+            else alert('创建失败');
+            return false;
+          }
+          async function importTask(e) {
+            e.preventDefault();
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async function() {
+              var file = input.files[0];
+              if (!file) return;
+              var json = JSON.parse(await file.text());
+              var headers = {'Content-Type':'application/json'};
+              var token = document.querySelector('meta[name="_csrf"]')?.content;
+              var headerName = document.querySelector('meta[name="_csrf_header"]')?.content;
+              if (token && headerName) headers[headerName] = token;
+              var resp = await fetch('/api/automation/tasks/import', {method:'POST', headers:headers, body:JSON.stringify(json)});
+              var data = await resp.json();
+              if (data.ok) window.location.href = '/automation/' + data.id;
+              else alert('导入失败');
+            };
+            input.click();
+            return false;
+          }
+        </script>
+      </div>
+    </div>
+
+    <!-- Task list -->
+    <div class="card">
+      <div class="card-title">任务列表 <span style="font-size:12px;color:var(--muted)" th:text="'（共 '+${#lists.size(tasks)}+' 项）'"></span></div>
+      <div class="card-body">
+        <table>
+          <thead>
+          <tr><th>ID</th><th>名称</th><th>触发</th><th>间隔/Cron</th><th>上次执行</th><th>下次执行</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+          <tr th:each="t : ${tasks}">
+            <td th:text="${t.id}"></td>
+            <td><a th:href="@{|/automation/${t.id}|}" th:text="${t.name}"></a></td>
+            <td>
+              <span th:if="${t.trigger_type == 'manual'}">🔘 手动</span>
+              <span th:if="${t.trigger_type == 'interval'}">⏱ 定时</span>
+              <span th:if="${t.trigger_type == 'cron'}">🕐 Cron</span>
+            </td>
+            <td>
+              <span th:if="${t.trigger_type == 'interval'}" th:text="${t.trigger_interval_secs} + 's'"></span>
+              <span th:if="${t.trigger_type == 'cron'}" th:text="${t.trigger_cron}"></span>
+              <span th:if="${t.trigger_type == 'manual'}">—</span>
+            </td>
+            <td class="mono" th:text="${t.last_run_at != null && t.last_run_at > 0} ? ${#dates.format(new java.util.Date((long)t.last_run_at), 'MM-dd HH:mm')} : '—'"></td>
+            <td class="mono" th:text="${t.next_run_at != null && t.next_run_at > 0} ? ${#dates.format(new java.util.Date((long)t.next_run_at), 'MM-dd HH:mm')} : '—'"></td>
+            <td>
+              <span th:if="${t.enabled == 1}" style="color:var(--ok);font-weight:bold">✔</span>
+              <span th:if="${t.enabled != 1}" style="color:var(--muted)">✘</span>
+            </td>
+            <td class="dense-actions">
+              <button th:attr="data-task-id=${t.id}" class="ok-btn trigger-btn" style="font-size:12px">▶</button>
+              <button th:attr="data-task-id=${t.id}, data-enabled=${t.enabled}" class="toggle-btn" style="font-size:12px" th:text="${t.enabled == 1 ? '⏸' : '▶'}"></button>
+              <button th:attr="data-task-id=${t.id}" class="clone-btn" style="font-size:12px" title="克隆">📋</button>
+              <button th:attr="data-task-id=${t.id}" class="export-btn" style="font-size:12px" title="导出">📥</button>
+              <button th:attr="data-task-id=${t.id}" class="danger delete-btn" style="font-size:12px">✕</button>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(tasks)}"><td colspan="8" style="color:var(--muted);text-align:center;padding:30px">暂无自动化任务。点击上方创建第一个，或 <a href="#" onclick="return importTask(event)" style="text-decoration:underline">导入 JSON</a>。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+function csrfHeaders() {
+  var token = document.querySelector('meta[name="_csrf"]')?.content;
+  var header = document.querySelector('meta[name="_csrf_header"]')?.content;
+  var h = {'Content-Type':'application/x-www-form-urlencoded'};
+  if (token && header) h[header] = token;
+  return h;
+}
+document.addEventListener('click', async function(e) {
+  var btn = e.target.closest('button');
+  if (!btn) return;
+  var taskId = btn.getAttribute('data-task-id');
+  if (!taskId) return;
+
+  if (btn.classList.contains('trigger-btn')) {
+    if (!confirm('确认立即执行任务 #' + taskId + '？')) return;
+    var resp = await fetch('/api/automation/tasks/' + taskId + '/trigger', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+    var data = await resp.json();
+    if (data.ok) alert('已加入执行队列，1-2秒内执行。');
+    else alert('触发失败');
+  } else if (btn.classList.contains('toggle-btn')) {
+    var currentlyEnabled = btn.getAttribute('data-enabled') === '1';
+    await fetch('/api/automation/tasks/' + taskId + '/toggle', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams('enabled=' + !currentlyEnabled)});
+    location.reload();
+  } else if (btn.classList.contains('clone-btn')) {
+    if (!confirm('克隆任务 #' + taskId + '？')) return;
+    var resp = await fetch('/api/automation/tasks/' + taskId + '/clone', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+    var data = await resp.json();
+    if (data.ok) window.location.href = '/automation/' + data.id;
+    else alert('克隆失败');
+  } else if (btn.classList.contains('export-btn')) {
+    var resp = await fetch('/api/automation/tasks/' + taskId);
+    var json = await resp.json();
+    var blob = new Blob([JSON.stringify(json, null, 2)], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'automation_' + (json.name || taskId) + '.json';
+    a.click();
+  } else if (btn.classList.contains('delete-btn')) {
+    if (!confirm('确认删除任务 #' + taskId + '？此操作不可撤销！')) return;
+    await fetch('/api/automation/tasks/' + taskId + '/delete', {method:'POST', headers: csrfHeaders(), body:new URLSearchParams()});
+    location.reload();
+  }
+});
+</script>
+</body>
+</html>

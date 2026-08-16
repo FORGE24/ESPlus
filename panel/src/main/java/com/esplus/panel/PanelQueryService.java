@@ -1394,4 +1394,331 @@ public class PanelQueryService {
         map.put("message", "根据近 7 天数据，预计每天约 " + bestHour + ":00 在线接近峰值（均 " + map.get("peakAvg") + " 人），建议提前优化实体/区块。");
         return map;
     }
+
+    // ── Automation CRUD ─────────────────────────────────────────────
+
+    public void ensureAutomationTables() {
+        try {
+            jdbc.execute("""
+                    CREATE TABLE IF NOT EXISTS automation_tasks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        trigger_type TEXT NOT NULL DEFAULT 'manual',
+                        trigger_interval_secs INTEGER NOT NULL DEFAULT 0,
+                        trigger_cron TEXT,
+                        enabled INTEGER NOT NULL DEFAULT 1,
+                        last_run_at INTEGER,
+                        next_run_at INTEGER,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )
+                    """);
+            jdbc.execute("""
+                    CREATE TABLE IF NOT EXISTS automation_nodes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        task_id INTEGER NOT NULL,
+                        name TEXT,
+                        position INTEGER NOT NULL DEFAULT 0,
+                        created_at INTEGER NOT NULL
+                    )
+                    """);
+            jdbc.execute("""
+                    CREATE TABLE IF NOT EXISTS automation_operations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        node_id INTEGER NOT NULL,
+                        task_id INTEGER NOT NULL,
+                        position INTEGER NOT NULL DEFAULT 0,
+                        action_type TEXT NOT NULL,
+                        params TEXT,
+                        enabled INTEGER NOT NULL DEFAULT 1,
+                        created_at INTEGER NOT NULL
+                    )
+                    """);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public List<Map<String, Object>> listAutomationTasks() {
+        ensureAutomationTables();
+        return jdbc.queryForList(
+                "SELECT id, name, description, trigger_type, trigger_interval_secs, trigger_cron, enabled, last_run_at, next_run_at, created_at FROM automation_tasks ORDER BY id DESC");
+    }
+
+    public Map<String, Object> getAutomationTask(long taskId) {
+        ensureAutomationTables();
+        var tasks = jdbc.queryForList(
+                "SELECT id, name, description, trigger_type, trigger_interval_secs, trigger_cron, enabled, last_run_at, next_run_at, created_at FROM automation_tasks WHERE id = ?", taskId);
+        if (tasks.isEmpty()) {
+            return Map.of("found", false);
+        }
+        Map<String, Object> map = new HashMap<>(tasks.getFirst());
+        map.put("found", true);
+        map.put("nodes", jdbc.queryForList(
+                "SELECT id, name, position FROM automation_nodes WHERE task_id = ? ORDER BY position ASC", taskId));
+        var ops = jdbc.queryForList(
+                """
+                SELECT o.id, o.node_id, o.position, o.action_type, o.params, o.enabled, n.name as node_name
+                FROM automation_operations o
+                LEFT JOIN automation_nodes n ON o.node_id = n.id
+                WHERE o.task_id = ?
+                ORDER BY n.position ASC, o.position ASC
+                """, taskId);
+        map.put("operations", ops);
+        return map;
+    }
+
+    public long createAutomationTask(String name, String description, String triggerType, int intervalSecs, String cron) {
+        ensureAutomationTables();
+        String n = name == null || name.isBlank() ? "Untitled" : name.trim();
+        String desc = description == null || description.isBlank() ? null : description.trim();
+        String trigger = triggerType == null ? "manual" : triggerType.trim();
+        if (!List.of("interval", "cron", "manual").contains(trigger)) trigger = "manual";
+        intervalSecs = Math.max(0, Math.min(intervalSecs, 86400 * 365));
+        long now = System.currentTimeMillis();
+        long nextRun = (intervalSecs > 0 && !"manual".equals(trigger)) ? now + intervalSecs * 1000L : 0L;
+        jdbc.update(
+                """
+                INSERT INTO automation_tasks (name, description, trigger_type, trigger_interval_secs, trigger_cron, enabled, next_run_at, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+                """,
+                n, desc, trigger, intervalSecs, cron == null ? null : cron.trim(), nextRun, now, now);
+        Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
+        writePanelAudit(null, "automation_task_create", n, true);
+        return id == null ? 0L : id;
+    }
+
+    public boolean toggleAutomationTaskEnabled(long taskId, boolean enabled) {
+        ensureAutomationTables();
+        long now = System.currentTimeMillis();
+        // If enabling an interval task, also set next_run_at
+        var rows = jdbc.queryForList(
+                "SELECT trigger_type, trigger_interval_secs, trigger_cron FROM automation_tasks WHERE id = ?", taskId);
+        if (rows.isEmpty()) return false;
+        var row = rows.getFirst();
+        String trigger = String.valueOf(row.get("trigger_type"));
+        int interval = row.get("trigger_interval_secs") instanceof Number n ? n.intValue() : 0;
+        String cron = row.get("trigger_cron") == null ? null : String.valueOf(row.get("trigger_cron"));
+        long nextRun = 0;
+        if (enabled && !"manual".equals(trigger)) {
+            if (interval > 0) {
+                nextRun = now + interval * 1000L;
+            } else if (!"cron".equals(trigger)) {
+                nextRun = 0;
+            } else {
+                // cron: set a rough next-run for display; mod-side AutomationService recalculates precisely
+                nextRun = now + 60_000L; // fallback 1 minute for cron
+            }
+        }
+        int n = jdbc.update(
+                "UPDATE automation_tasks SET enabled = ?, next_run_at = ?, updated_at = ? WHERE id = ?",
+                enabled ? 1 : 0, nextRun, now, taskId);
+        writePanelAudit(null, "automation_task_toggle", "id=" + taskId + " enabled=" + enabled, n > 0);
+        return n > 0;
+    }
+
+    public boolean updateAutomationTask(long taskId, String name, String description, String triggerType, int intervalSecs, String cron, boolean enabled) {
+        ensureAutomationTables();
+        String n = name == null || name.isBlank() ? "Untitled" : name.trim();
+        String desc = description == null || description.isBlank() ? null : description.trim();
+        String trigger = triggerType == null ? "manual" : triggerType.trim();
+        if (!List.of("interval", "cron", "manual").contains(trigger)) trigger = "manual";
+        intervalSecs = Math.max(0, Math.min(intervalSecs, 86400 * 365));
+        long now = System.currentTimeMillis();
+        long nextRun = 0;
+        if (enabled && !"manual".equals(trigger)) {
+            if (intervalSecs > 0) {
+                nextRun = now + intervalSecs * 1000L;
+            } else if (!"cron".equals(trigger)) {
+                nextRun = 0;
+            } else {
+                // cron: rough estimate; mod-side AutomationService recalculates precisely
+                nextRun = now + 60_000L;
+            }
+        }
+        int n2 = jdbc.update(
+                """
+                UPDATE automation_tasks SET name = ?, description = ?, trigger_type = ?, trigger_interval_secs = ?, trigger_cron = ?, enabled = ?, next_run_at = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                n, desc, trigger, intervalSecs, cron == null ? null : cron.trim(), enabled ? 1 : 0, nextRun, now, taskId);
+        writePanelAudit(null, "automation_task_update", "id=" + taskId, n2 > 0);
+        return n2 > 0;
+    }
+
+    public boolean deleteAutomationTask(long taskId) {
+        ensureAutomationTables();
+        jdbc.update("DELETE FROM automation_operations WHERE task_id = ?", taskId);
+        jdbc.update("DELETE FROM automation_nodes WHERE task_id = ?", taskId);
+        int n = jdbc.update("DELETE FROM automation_tasks WHERE id = ?", taskId);
+        writePanelAudit(null, "automation_task_delete", "id=" + taskId, n > 0);
+        return n > 0;
+    }
+
+    public long addAutomationNode(long taskId, String name) {
+        ensureAutomationTables();
+        String n = name == null || name.isBlank() ? "步骤" : name.trim();
+        Integer maxObj = jdbc.queryForObject(
+                "SELECT COALESCE(MAX(position), -1) FROM automation_nodes WHERE task_id = ?", Integer.class, taskId);
+        int maxPos = maxObj == null ? 0 : maxObj + 1;
+        long now = System.currentTimeMillis();
+        jdbc.update(
+                "INSERT INTO automation_nodes (task_id, name, position, created_at) VALUES (?, ?, ?, ?)",
+                taskId, n, maxPos, now);
+        Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
+        return id == null ? 0L : id;
+    }
+
+    public boolean deleteAutomationNode(long nodeId) {
+        ensureAutomationTables();
+        jdbc.update("DELETE FROM automation_operations WHERE node_id = ?", nodeId);
+        int n = jdbc.update("DELETE FROM automation_nodes WHERE id = ?", nodeId);
+        return n > 0;
+    }
+
+    public long addAutomationOperation(long taskId, long nodeId, String actionType, String params) {
+        ensureAutomationTables();
+        if (actionType == null || actionType.isBlank()) return 0L;
+        String action = actionType.trim();
+        String p = params == null ? "" : params.trim();
+        Integer maxObj = jdbc.queryForObject(
+                "SELECT COALESCE(MAX(position), -1) FROM automation_operations WHERE node_id = ?", Integer.class, nodeId);
+        int maxPos = maxObj == null ? 0 : maxObj + 1;
+        long now = System.currentTimeMillis();
+        jdbc.update(
+                "INSERT INTO automation_operations (node_id, task_id, position, action_type, params, enabled, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)",
+                nodeId, taskId, maxPos, action, p, now);
+        Long id = jdbc.queryForObject("SELECT last_insert_rowid()", Long.class);
+        return id == null ? 0L : id;
+    }
+
+    public boolean updateOperationParams(long opId, String actionType, String params, boolean enabled) {
+        ensureAutomationTables();
+        int n = jdbc.update(
+                "UPDATE automation_operations SET action_type = ?, params = ?, enabled = ? WHERE id = ?",
+                actionType == null ? "" : actionType.trim(), params == null ? "" : params.trim(), enabled ? 1 : 0, opId);
+        return n > 0;
+    }
+
+    public boolean moveAutomationNode(long taskId, long nodeId, int direction) {
+        ensureAutomationTables();
+        var nodes = jdbc.queryForList(
+                "SELECT id, position FROM automation_nodes WHERE task_id = ? ORDER BY position ASC", taskId);
+        if (nodes.size() < 2) return false;
+        int idx = -1;
+        for (int i = 0; i < nodes.size(); i++) {
+            if (nodeId == ((Number) nodes.get(i).get("id")).longValue()) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) return false;
+        int targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= nodes.size()) return false;
+        long otherId = ((Number) nodes.get(targetIdx).get("id")).longValue();
+        int pos = ((Number) nodes.get(idx).get("position")).intValue();
+        int otherPos = ((Number) nodes.get(targetIdx).get("position")).intValue();
+        jdbc.update("UPDATE automation_nodes SET position = ? WHERE id = ?", otherPos, nodeId);
+        jdbc.update("UPDATE automation_nodes SET position = ? WHERE id = ?", pos, otherId);
+        return true;
+    }
+
+    public boolean moveAutomationOperation(long nodeId, long opId, int direction) {
+        ensureAutomationTables();
+        var ops = jdbc.queryForList(
+                "SELECT id, position FROM automation_operations WHERE node_id = ? ORDER BY position ASC", nodeId);
+        if (ops.size() < 2) return false;
+        int idx = -1;
+        for (int i = 0; i < ops.size(); i++) {
+            if (opId == ((Number) ops.get(i).get("id")).longValue()) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) return false;
+        int targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= ops.size()) return false;
+        long otherId = ((Number) ops.get(targetIdx).get("id")).longValue();
+        int pos = ((Number) ops.get(idx).get("position")).intValue();
+        int otherPos = ((Number) ops.get(targetIdx).get("position")).intValue();
+        jdbc.update("UPDATE automation_operations SET position = ? WHERE id = ?", otherPos, opId);
+        jdbc.update("UPDATE automation_operations SET position = ? WHERE id = ?", pos, otherId);
+        return true;
+    }
+
+    public List<Map<String, Object>> automationLogs(long taskId, int limit) {
+        ensureAutomationTables();
+        return jdbc.queryForList(
+                "SELECT id, task_id, success, error, created_at FROM automation_logs WHERE task_id = ? ORDER BY id DESC LIMIT ?",
+                taskId, limit);
+    }
+
+    public long cloneAutomationTask(long taskId) {
+        ensureAutomationTables();
+        var task = getAutomationTask(taskId);
+        if (!Boolean.TRUE.equals(task.get("found"))) return 0L;
+        long newId = createAutomationTask(
+                task.get("name") + " (副本)", String.valueOf(task.getOrDefault("description", "")),
+                String.valueOf(task.getOrDefault("trigger_type", "manual")),
+                task.get("trigger_interval_secs") instanceof Number n ? n.intValue() : 0,
+                String.valueOf(task.getOrDefault("trigger_cron", "")));
+        if (newId <= 0) return 0L;
+        @SuppressWarnings("unchecked")
+        var nodes = (List<Map<String, Object>>) task.get("nodes");
+        @SuppressWarnings("unchecked")
+        var ops = (List<Map<String, Object>>) task.get("operations");
+        if (nodes != null) {
+            for (var node : nodes) {
+                long newNodeId = addAutomationNode(newId, String.valueOf(node.getOrDefault("name", "步骤")));
+                if (ops != null && newNodeId > 0) {
+                    long origNodeId = node.get("id") instanceof Number n ? n.longValue() : 0;
+                    for (var op : ops) {
+                        long opNodeId = op.get("node_id") instanceof Number n ? n.longValue() : 0;
+                        if (opNodeId == origNodeId) {
+                            addAutomationOperation(newId, newNodeId,
+                                    String.valueOf(op.getOrDefault("action_type", "console_cmd")),
+                                    String.valueOf(op.getOrDefault("params", "")));
+                        }
+                    }
+                }
+            }
+        }
+        return newId;
+    }
+
+    public boolean deleteAutomationOperation(long opId) {
+        ensureAutomationTables();
+        int n = jdbc.update("DELETE FROM automation_operations WHERE id = ?", opId);
+        return n > 0;
+    }
+
+    public boolean triggerAutomationTask(long taskId) {
+        ensureAutomationTables();
+        ensurePanelActionsTable();
+        jdbc.update(
+                """
+                INSERT INTO panel_actions (action, target_uuid, target_name, payload, status, created_at)
+                VALUES ('automation_trigger', NULL, NULL, ?, 'pending', ?)
+                """,
+                String.valueOf(taskId), System.currentTimeMillis());
+        writePanelAudit(null, "automation_manual_trigger", "task=" + taskId, true);
+        return true;
+    }
+
+    public Map<String, Object> automationStats() {
+        ensureAutomationTables();
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total_tasks", jdbc.queryForObject("SELECT COUNT(*) FROM automation_tasks", Long.class));
+        stats.put("enabled_tasks", jdbc.queryForObject("SELECT COUNT(*) FROM automation_tasks WHERE enabled = 1", Long.class));
+        stats.put("total_logs", jdbc.queryForObject("SELECT COUNT(*) FROM automation_logs", Long.class));
+        var row = jdbc.queryForList("SELECT SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) AS fail FROM automation_logs LIMIT 1");
+        if (!row.isEmpty()) {
+            var r = row.getFirst();
+            stats.put("success_runs", r.get("ok"));
+            stats.put("failed_runs", r.get("fail"));
+        }
+        stats.put("recent_runs", jdbc.queryForList(
+                "SELECT task_id, success, error, created_at FROM automation_logs ORDER BY id DESC LIMIT 10"));
+        return stats;
+    }
 }

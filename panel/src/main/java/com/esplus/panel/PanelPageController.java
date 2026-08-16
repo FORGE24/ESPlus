@@ -11,11 +11,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@Controller
+/**
+ * Legacy Thymeleaf page controller — disabled in favor of the React SPA.
+ * All GET routes are now handled by PanelSpaController (forwarding to index.html).
+ * All API endpoints are handled by PanelApiController and PanelApiV2Controller.
+ * This class is kept for reference but no longer registered as a Spring controller.
+ */
+// @Controller  // Disabled — React SPA now serves all pages
 public class PanelPageController {
     private final PanelQueryService queries;
     private final PanelGovernanceService governance;
     private final PanelMfaService mfa;
+    private final LoginAttemptService attempts;
 
     @Value("${server.port:8088}")
     private int panelPort;
@@ -29,10 +36,12 @@ public class PanelPageController {
     @Value("${esplus.securityReady:false}")
     private boolean securityReady;
 
-    public PanelPageController(PanelQueryService queries, PanelGovernanceService governance, PanelMfaService mfa) {
+    public PanelPageController(PanelQueryService queries, PanelGovernanceService governance,
+                               PanelMfaService mfa, LoginAttemptService attempts) {
         this.queries = queries;
         this.governance = governance;
         this.mfa = mfa;
+        this.attempts = attempts;
     }
 
     @GetMapping("/login")
@@ -1414,7 +1423,13 @@ public class PanelPageController {
     }
 
     @PostMapping("/login/mfa")
-    public String postLoginMfa(@RequestParam String code, jakarta.servlet.http.HttpSession session) {
+    public String postLoginMfa(@RequestParam String code, jakarta.servlet.http.HttpSession session,
+                               jakarta.servlet.http.HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        String sessionId = session.getId();
+        if (attempts.isMfaLocked(ip, sessionId)) {
+            return "redirect:/login/mfa?err=locked";
+        }
         Object pending = session.getAttribute(PanelMfaFilter.MFA_PENDING);
         String user = pending == null ? null : String.valueOf(pending);
         org.springframework.security.core.Authentication auth =
@@ -1423,8 +1438,10 @@ public class PanelPageController {
             user = auth.getName();
         }
         if (user == null || !mfa.verify(user, code)) {
+            attempts.onMfaFailure(ip, sessionId);
             return "redirect:/login/mfa?err=bad";
         }
+        attempts.onMfaSuccess(ip, sessionId);
         session.setAttribute(PanelMfaFilter.MFA_OK, user);
         session.removeAttribute(PanelMfaFilter.MFA_PENDING);
         return "redirect:/";
@@ -1527,5 +1544,28 @@ public class PanelPageController {
         model.addAttribute("hours168", queries.perfSamplesSince(168));
         model.addAttribute("forecast", queries.simpleOnlineForecast());
         return "status-trends";
+    }
+
+    @GetMapping("/automation")
+    public String automation(
+            @RequestParam(required = false) String msg,
+            @RequestParam(required = false) String err,
+            Model model) {
+        model.addAttribute("tasks", queries.listAutomationTasks());
+        model.addAttribute("msg", msg);
+        model.addAttribute("err", err);
+        return "automation";
+    }
+
+    @GetMapping("/automation/{id}")
+    public String automationDetail(@PathVariable long id, Model model) {
+        Map<String, Object> task = queries.getAutomationTask(id);
+        if (!Boolean.TRUE.equals(task.get("found"))) {
+            return "redirect:/automation?err=not_found";
+        }
+        model.addAllAttributes(task);
+        model.addAttribute("taskId", id);
+        model.addAttribute("logs", queries.automationLogs(id, 20));
+        return "automation-detail";
     }
 }

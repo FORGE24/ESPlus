@@ -72,12 +72,16 @@
 </div>
 <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
 <script>
-  setTimeout(function () {
+  (function () {
     const params = new URLSearchParams(window.location.search);
-    params.delete('msg');
-    const qs = params.toString();
-    window.location.replace('/console' + (qs ? ('?' + qs) : ''));
-  }, 3000);
+    if (params.has('msg')) {
+      setTimeout(function () {
+        params.delete('msg');
+        const qs = params.toString();
+        window.location.replace('/console' + (qs ? ('?' + qs) : ''));
+      }, 3000);
+    }
+  })();
 </script>
 </body>
 </html>
