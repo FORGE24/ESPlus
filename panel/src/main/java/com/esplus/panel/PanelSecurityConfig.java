@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -79,7 +80,12 @@ public class PanelSecurityConfig {
                         .failureHandler(failureHandler)
                         .permitAll())
                 .logout(Customizer.withDefaults())
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/ops/**", "/api/auth/**", "/api/**"))
+                // CSRF: Cookie-to-Header 模式，默认只对 state-changing 方法（POST/PUT/DELETE/PATCH）
+                // 生效；ops API 走独立 token 认证、auth 走表单登录，均为无 cookie 状态变更，
+                // 其他 /api/** 必须由 JS 读取 XSRF-TOKEN cookie 后放入 X-XSRF-TOKEN 头。
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers("/api/ops/**", "/api/auth/**"))
                 .addFilterAfter(mfaFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

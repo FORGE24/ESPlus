@@ -34,6 +34,7 @@ public final class AdminRiskScorer {
     public List<Map<String, Object>> recompute(int windowDays) {
         long since = System.currentTimeMillis() - windowDays * 86_400_000L;
         List<Map<String, Object>> rows = new ArrayList<>();
+        List<AlertPending> pendingAlerts = new ArrayList<>();
         try {
             synchronized (database.lock()) {
                 Map<String, Agg> aggs = new HashMap<>();
@@ -113,15 +114,25 @@ public final class AdminRiskScorer {
                     rows.add(row);
 
                     if (score >= com.esplus.audit.GlobalEventDao.configInt(Config.ADMIN_RISK_ALERT_SCORE, 50)) {
-                        raiseRiskAlert(entry.getKey(), a.name, score, suggestion);
+                        pendingAlerts.add(new AlertPending(entry.getKey(), a.name, score, suggestion));
                     }
                 }
+            }
+            // Alert insert + webhook dispatch happen OUTSIDE the global DB lock.
+            // webhook.dispatch() is a blocking HTTP call (up to ~8s); leaving it
+            // inside synchronized(database.lock()) freezes every other thread
+            // that needs the SQLite connection (audit writer, panel DB access).
+            for (AlertPending p : pendingAlerts) {
+                raiseRiskAlert(p.uuid, p.name, p.score, p.suggestion);
             }
         } catch (Exception ex) {
             LOGGER.warn("Admin risk recompute failed", ex);
         }
         rows.sort((x, y) -> Integer.compare((Integer) y.get("score"), (Integer) x.get("score")));
         return rows;
+    }
+
+    private record AlertPending(String uuid, String name, int score, String suggestion) {
     }
 
     private void raiseRiskAlert(String uuid, String name, int score, String suggestion) {
